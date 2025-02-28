@@ -895,7 +895,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
-        #self.selphie(f"Bot started: "+now())
+        self.selphie(f"Bot started: "+now())
         loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
         loop.run_as_thread()
         while 1:
