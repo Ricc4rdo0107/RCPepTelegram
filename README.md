@@ -25,6 +25,8 @@ execute - Run system command.
 microphone - Record mic audio.  
 browser - Open URL in browser.
 quickmenu - Opens a quick menu.
+waitforface - Send a webcam photo when face is detected till timeout.
+keylogger - Records pressed keys on keyboard.
 ```
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.
