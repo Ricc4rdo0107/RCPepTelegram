@@ -27,7 +27,6 @@ except ImportError:
 
 #MISC
 import sys
-import json
 import ctypes
 import socket
 import traceback
@@ -39,6 +38,7 @@ from string import printable
 from time import time, sleep
 from threading import Thread
 from datetime import datetime
+from dotenv import load_dotenv
 from typing import Any, Callable
 from io import BytesIO, StringIO
 from os.path import join, abspath, isfile
@@ -161,12 +161,9 @@ def ogg_to_wav(filename: str, rmold: bool=False) -> str:
     return new_filepath
 
 #GETTING TOKEN AND CHAT_ID
-def getCred(filename: str="creds.json") -> tuple[str,int]:
-    with open(filename, "r") as fi:
-        var = json.load(fi)
-    token = var["token"]
-    chat_id = var["chat_id"]
-    return token,chat_id
+def getCred() -> tuple[str,int]:
+    load_dotenv()
+    return getenv("TOKEN"),getenv("CHATID")
         
 #Resizing assets so they all take the same time to load when doing jumpscares(I guess)
 def compress_and_resize_image(image_array, target_size=(1920, 1080), quality=30) -> np.array:
