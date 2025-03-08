@@ -37,8 +37,8 @@ For example this command: "/fullclip 10; /jumpscare" will start the recording, w
 jumpscare while recording screen and webcam.
 
 
-<h1>Build</h1>
+# BUILD
 I used nuitka to build a light executable, only problem I had was including directories in it and I haven't managed to do it yet.
-```
+```bash
 nuitka pep2.py --windows-console-mode=disable --onefile --follow-imports --msvc=latest
 ```
