@@ -1,6 +1,5 @@
 *.bat
-creds.json
-
+*.json
 venv/
 env-peppino/
 backup/
