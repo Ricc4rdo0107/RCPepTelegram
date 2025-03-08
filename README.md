@@ -34,4 +34,11 @@ keylogger - Records pressed keys on keyboard.
 
 You can run multiple commands at the same time by sending them in the same message but separated by a comma.
 For example this command: "/fullclip 10; /jumpscare" will start the recording, waits 5 seconds, then sends a
-jumpscare while recording screen and webcam
+jumpscare while recording screen and webcam.
+
+
+<h1>Build</h1>
+I used nuitka to build a light executable, only problem I had was including directories in it and I haven't managed to do it yet.
+```
+nuitka pep2.py --windows-console-mode=disable --onefile --follow-imports --msvc=latest
+```
