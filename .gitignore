@@ -1,5 +1,5 @@
 *.bat
-.env
+*.json
 venv/
 env-peppino/
 backup/
