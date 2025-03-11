@@ -36,6 +36,15 @@ You can run multiple commands at the same time by sending them in the same messa
 For example this command: "/fullclip 10; /jumpscare" will start the recording, waits 5 seconds, then sends a
 jumpscare while recording screen and webcam.
 
+# Config
+secret.json
+```json
+{
+    "token":"<YOUR TOKEN>",
+    "chatid":youchatid
+}
+```
+
 
 # BUILD
 I used nuitka to build a light executable, only problem I had was including directories in it and I haven't managed to do it yet.

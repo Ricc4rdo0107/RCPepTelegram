@@ -52,16 +52,10 @@ iswindows = name == "nt"
 islinux = not iswindows
 cwd_folder = getcwd()
 HOME_PATH = getenv("USERPROFILE") if iswindows else getenv("HOME")
-if getattr(sys, 'frozen', False):
-    vfx = abspath(join(sys._MEIPASS, "vfx"))
-    sfx = abspath(join(sys._MEIPASS, "sfx"))
-    prototxt_filename = join(sys._MEIPASS, 'model', '1.prototxt')
-    caffemodel_filename = join(sys._MEIPASS, 'model', '2.caffemodel')
-else:
-    vfx = abspath(join(cwd_folder, "vfx"))
-    sfx = abspath(join(cwd_folder, "sfx"))
-    prototxt_filename = join(cwd_folder, 'model', '1.prototxt')
-    caffemodel_filename = join(cwd_folder, 'model', '2.caffemodel')
+vfx = abspath(join(cwd_folder, "vfx"))
+sfx = abspath(join(cwd_folder, "sfx"))
+prototxt_filename = join(cwd_folder, 'model', '1.prototxt')
+caffemodel_filename = join(cwd_folder, 'model', '2.caffemodel')
 if isfile(prototxt_filename) and isfile(caffemodel_filename):
     with open(prototxt_filename, 'rb') as f:
         prototxt_data = f.read()
@@ -161,8 +155,8 @@ def ogg_to_wav(filename: str, rmold: bool=False) -> str:
     return new_filepath
 
 #GETTING TOKEN AND CHAT_ID
-def getCred() -> tuple[str,int]:
-    with open("creds.json") as fi:
+def getCred(filename:str="secret.json") -> tuple[str,int]:
+    with open(filename) as fi:
         var = json.load(fi)
     return var["token"],var["chatid"]
         
