@@ -26,7 +26,6 @@ except ImportError:
     SND_FILENAME = None
 
 #MISC
-import sys
 import json
 import ctypes
 import socket
@@ -1008,7 +1007,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.selphie(f"Bot started: "+now())
         loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
         loop.run_as_thread()
-        self.bsend("Ready to receive commands")
         while 1:
             try:
                 sleep(0.01)
