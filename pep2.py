@@ -630,13 +630,13 @@ class PeppinoTelegram:
         
 
     """
-ooooooooo.   oooooooooooo   .oooooo.     .oooooo.   ooooooooo.   oooooooooo.   
-`888   `Y88. `888'     `8  d8P'  `Y8b   d8P'  `Y8b  `888   `Y88. `888'   `Y8b  
- 888   .d88'  888         888          888      888  888   .d88'  888      888 
- 888ooo88P'   888oooo8    888          888      888  888ooo88P'   888      888 
- 888`88b.     888    "    888          888      888  888`88b.     888      888 
- 888  `88b.   888       o `88b    ooo  `88b    d88'  888  `88b.   888     d88' 
-o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   
+ooooooooo.   oooooooooooo   .oooooo.     .oooooo.   ooooooooo.   oooooooooo.   ooooo ooooo      ooo   .oooooo.    
+`888   `Y88. `888'     `8  d8P'  `Y8b   d8P'  `Y8b  `888   `Y88. `888'   `Y8b  `888' `888b.     `8'  d8P'  `Y8b   
+ 888   .d88'  888         888          888      888  888   .d88'  888      888  888   8 `88b.    8  888
+ 888ooo88P'   888oooo8    888          888      888  888ooo88P'   888      888  888   8   `88b.  8  888
+ 888`88b.     888    "    888          888      888  888`88b.     888      888  888   8     `88b.8  888     ooooo
+ 888  `88b.   888       o `88b    ooo  `88b    d88'  888  `88b.   888     d88'  888   8       `888  `88.    .88'
+o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o888o o8o        `8   `Y8bood8P'
     """
 
     def keylogger(self, timeout=10) -> None:
