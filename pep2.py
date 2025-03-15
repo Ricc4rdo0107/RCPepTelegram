@@ -26,6 +26,7 @@ except ImportError:
     SND_FILENAME = None
 
 #MISC
+import sys
 import json
 import ctypes
 import socket
@@ -105,7 +106,8 @@ END – Presses the End key.
 PAGEUP – Presses Page Up.
 PAGEDOWN – Presses Page Down."""
 
-HELP = """id - Get Owner Chat ID.  
+HELP = """stop - Stops the bot.
+id - Get Owner Chat ID.  
 pss - Play "psst" sound.  
 bsend - Send custom text.  
 altf4 - Simulate Alt + F4.  
@@ -502,6 +504,7 @@ class PeppinoTelegram:
             "pss":self.pss,
             "psst":self.pss,
             "bsend":self.bsend,
+            "stop":sys.exit,
             "altf4":self.altf4,
             "breath":self.breath,
             "browser":browseropen,

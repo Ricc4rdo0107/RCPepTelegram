@@ -3,6 +3,7 @@ Remote Control Bot, inspired to the previous creation named "Peppino", this one 
 (only tested on Windows10/11)
 ```
 /help: 
+stop - Stops the bot.
 id - Get Owner Chat ID.  
 pss - Play "psst" sound.  
 bsend - Send custom text.  
@@ -46,7 +47,6 @@ secret.json
     "chatid":youchatid
 }
 ```
-
 
 # BUILD
 I used nuitka to build a light executable, only problem I had was including directories in it and I haven't managed to do it yet.
