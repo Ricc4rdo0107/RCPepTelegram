@@ -98,8 +98,8 @@ Unauthorized Access: Using this script to access or control a system without the
 Potential for Abuse: This script can be easily modified for malicious purposes, such as spying, data theft, or system disruption.
 
 ## Security Risks
-Exposure of Sensitive Data: If the script is not properly secured, sensitive information such as Telegram API tokens, chat IDs, and recorded data could be exposed.
-Remote Exploitation: If the script is deployed in an insecure environment, it could be exploited by attackers to gain unauthorized access to the system.
+- Exposure of Sensitive Data: If the script is not properly secured, sensitive information such as Telegram API tokens, chat IDs, and recorded data could be exposed.
+- Remote Exploitation: If the script is deployed in an insecure environment, it could be exploited by attackers to gain unauthorized access to the system.
 
 ## Recommendations
 - Use Responsibly: Only use this script in environments where you have explicit permission to do so, such as your own systems or systems you are authorized to test.
