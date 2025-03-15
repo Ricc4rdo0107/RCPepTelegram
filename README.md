@@ -42,15 +42,15 @@ For example this command: "/fullclip 10; /jumpscare" will start the recording, w
 jumpscare while recording screen and webcam.
 
 ## Features
-Screen Recording: Record the screen for a specified duration.
-Webcam Recording: Record video from the webcam.
-Keylogging: Log keystrokes and send them to the bot owner.
-Remote Commands: Execute system commands remotely.
-Duckyscript Execution: Execute Duckyscript payloads.
-Audio Recording: Record audio from the microphone.
-Screenshot Capture: Take screenshots of the system.
-Message Boxes: Display custom message boxes on the system.
-System Control: Simulate system shutdowns or other actions.
+-Screen Recording: Record the screen for a specified duration.
+-Webcam Recording: Record video from the webcam.
+-Keylogging: Log keystrokes and send them to the bot owner.
+-Remote Commands: Execute system commands remotely.
+-Duckyscript Execution: Execute Duckyscript payloads.
+-Audio Recording: Record audio from the microphone.
+-Screenshot Capture: Take screenshots of the system.
+-Message Boxes: Display custom message boxes on the system.
+-System Control: Simulate system shutdowns or other actions.
 
 
 ## Installation
