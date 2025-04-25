@@ -986,7 +986,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         system(f"shutdown -s -t {seconds}")
 
     def fake_shutdown(self) -> None:
-        system('shutdown /s /t 34 /c "Windows Error 104e240-69, notify the administrator"')
+        system('shutdown /s /t 34 /c "Windows Error 104e240-69, please notify the administrator"')
         system("shutdown -a")
         
     def pss(self) -> None:
