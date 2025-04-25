@@ -36,8 +36,10 @@ keylogger - Records pressed keys on keyboard.
 livekeylogger - Sends live updates about what's being typed on the keyboard.
 setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
+processkiller - Shows a table of processes that you can kill.
+terminateprocess - Kills a process by name.
 mute - Set computer's volume to 0.
-full - Set computer's volume to 100
+full - Set computer's volume to 100.
 ```
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending an audio/voice* - Will play the audio/voice in the background.

