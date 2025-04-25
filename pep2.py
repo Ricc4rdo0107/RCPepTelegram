@@ -1038,7 +1038,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
 
         recording_thread.start()
         status_message = self.new_editable_message("Recording")
-        sleep(7)
+        sleep(10)
         self.jumpscare(playaudio=True)
         status_message.edit("Jumpscared!")
         recording_thread.join()
