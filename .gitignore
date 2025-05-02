@@ -4,3 +4,4 @@ venv/
 backup/
 new_banner.py
 __pycache__/
+tests/
