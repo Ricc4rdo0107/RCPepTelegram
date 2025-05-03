@@ -464,7 +464,6 @@ class LoadingBar:
 
     def spinner_cycle(self):
         while self.perc_progress < 100:
-            print(self.perc_progress)
             new_bar = self.get_bar()
             self.ETDMessage.edit(new_bar)
             if self.spinner_index == len(self.spinner)-1:
