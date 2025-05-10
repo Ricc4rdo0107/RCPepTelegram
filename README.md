@@ -38,6 +38,9 @@ setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
 processkiller - Shows a table of processes that you can kill.
 terminateprocess - Kills a process by name.
+camerawallpaper - Sets webcam's frames as wallpaper.
+setvideowallpaper - Sets a video as wallpaper.
+mousecontroller - Sends a mouse controlling menu.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 ```
