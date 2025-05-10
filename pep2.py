@@ -148,6 +148,7 @@ getvolume - Gets the computer's volume level.
 processkiller - Shows a table of processes that you can kill.
 terminateprocess - Kills a process by name.
 camerawallpaper - Sets webcam's frames as wallpaper.
+setvideowallpaper - Sets a video as wallpaper.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 
@@ -802,8 +803,18 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
     """
 
     def setvideowallpaper(self, videofilename: str):
-        #TODO
-        ...
+        res = True
+        filename = join(BURN_DIRECTORY, "jxframe.png")
+        backup_filename = join(BURN_DIRECTORY, "backup.png")
+        backup_wallpaper(backup_filename)
+        video = VideoCapture(abspath(videofilename))
+        while res:
+            res, frame = video.read()
+            imwrite(frame)
+            change_wallpaper(filename)
+        change_wallpaper(backup_filename)
+        remove(filename)
+        remove(backup_filename)
 
     def setCameraAsWallpaper(self, seconds: float|int=5):
         loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
