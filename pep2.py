@@ -27,7 +27,6 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 try:
     from winsound import PlaySound, SND_FILENAME, SND_ASYNC
 except ImportError:
-    print("SOUNDS ARE NOT PLAYABLE")
     PlaySound = lambda *args:args
     SND_FILENAME = None
 
@@ -294,7 +293,6 @@ def change_wallpaper(image_path):
                                                    SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE)
         return True
     except Exception as e:
-        print(f"Error changing wallpaper: {e}")
         return False
 
 """
