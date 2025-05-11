@@ -5,3 +5,4 @@ backup/
 new_banner.py
 __pycache__/
 tests/
+update_readme.py
