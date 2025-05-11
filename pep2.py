@@ -51,9 +51,22 @@ from io import BytesIO, StringIO
 from random import choice, randint
 from string import ascii_letters, printable
 from webbrowser import open as browseropen
-from os.path import join, abspath, isfile, isdir, exists
+from os.path import join, abspath, isfile, isdir, exists, dirname
 from os import system, remove, getenv, getcwd, listdir, name, mkdir 
 from keyboard import press as press_key, release as release_key, read_event, KEY_DOWN
+
+
+def resource_path(relative_path: str) -> str:
+    try:
+        base_path = sys._MEIPASS  # PyInstaller
+    except AttributeError:
+        try:
+            import __main__
+            base_path = dirname(abspath(__main__.__file__))  # Nuitka
+        except:
+            base_path = abspath(".")
+
+    return join(base_path, relative_path)
 
 logging = False
 iswindows = name == "nt"
