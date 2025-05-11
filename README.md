@@ -78,7 +78,7 @@ pip install -r requirements.txt
 ## Configuration
 Create your own bot with <a href="https://core.telegram.org/bots#botfather">Botfather</a>
 Obtain your CHAT ID and BOT TOKEN.
-secret.json
+auth.json
 
 ```json
 {
