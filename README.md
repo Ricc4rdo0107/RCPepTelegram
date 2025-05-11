@@ -66,7 +66,7 @@ jumpscare while recording screen and webcam
 1. Clone the repository
 
 ```bash
-git clone https://github.com/Ricc4rdo0107/RCPepTelegram
+git clone https://github.com/RiccardoZappitelli/RCPepTelegram
 
 ```
 2. Install the dependences
