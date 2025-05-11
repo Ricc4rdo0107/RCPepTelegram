@@ -194,7 +194,7 @@ def ogg_to_wav(filename: str, rmold: bool=False) -> str:
     return new_filepath
 
 #GETTING TOKEN AND CHAT_ID
-def getCred(filename:str="secret.json") -> tuple[str,int]:
+def getCred(filename:str="auth.json") -> tuple[str,int]:
     with open(filename) as fi:
         var = json.load(fi)
     return var["token"],var["chatid"]
@@ -1360,7 +1360,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
-        print(self.audios)
         if not self.selphie(f"Bot started: "+now()):
             self.bsend(f"Bot started: {now}")
         loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
