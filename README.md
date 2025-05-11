@@ -3,7 +3,8 @@ Remote Control Bot, inspired to the previous creation named "Peppino", this one 
 (only tested on Windows10/11)
 
 
-```/help: 
+```
+/help: 
 stop - Stops the bot.
 id - Get Owner Chat ID.  
 pss - Play "psst" sound.  
@@ -51,16 +52,10 @@ tralalerotralala - Plays italian brainrot.
 
 You can run multiple commands at the same time by sending them in the same message but separated by a comma.
 For example this command: "/fullclip 10; /jumpscare" will start the recording, waits 5 seconds, then sends a
-jumpscare while recording screen and webcam``````
-*sending a photo* - Displays the photo on the screen as a pop-up.
-*sending an audio/voice* - Will play the audio/voice in the background.
-*sending a file that ends with '.dd' - will execute it as duckyscript. (send /duckyhelp to get commands)
-
-You can run multiple commands at the same time by sending them in the same message but separated by a comma.
-For example this command: "/fullclip 10; /jumpscare" will start the recording, waits 5 seconds, then sends a
-jumpscare while recording screen and webcam.
+jumpscare while recording screen and webcam```
 
 ## Features
+
 - Screen Recording: Record the screen for a specified duration.
 - Webcam Recording: Record video from the webcam.
 - Keylogging: Log keystrokes and send them to the bot owner.
@@ -74,32 +69,56 @@ jumpscare while recording screen and webcam.
 
 ## Installation
 1. Clone the repository
-```bash
+```
+
+
+bash
 git clone https://github.com/Ricc4rdo0107/RCPepTelegram
 ```
 
+
+
+
 2. Install the dependences
-```bash
+```
+
+
+bash
 pip install -r requirements.txt
 ```
+
+
+
 
 ## Configuration
 Create your own bot with <a href="https://core.telegram.org/bots#botfather">Botfather</a>
 Obtain your CHAT ID and BOT TOKEN.
 
 secret.json
-```json
+```
+
+
+json
 {
     "token":"<YOUR TOKEN>",
     "chatid":youchatid
 }
 ```
 
+
+
+
 ## BUILD
 I used nuitka to build a light executable, only problem I had was including directories in it and I haven't managed to do it yet.
-```bash
+```
+
+
+bash
 nuitka pep2.py --windows-console-mode=disable --onefile --follow-imports --msvc=latest
 ```
+
+
+
 
 ## ⚠️ WARNING: Security and Ethical Risks ⚠️
 This code is intended for educational purposes only and should not be used in any malicious, unethical, or unauthorized manner. The script contains functionalities that can potentially compromise the security and privacy of a system, including but not limited to:
