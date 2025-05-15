@@ -1258,7 +1258,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         old_volume = self.audio_mixer.getVolumePercentage()
         self.audio_mixer.full()
         if image is None:
-            image = self.images[choice(list(self.images.keys()))]
+            image = self.images[choice(list(self.nomemes))]
         else:
             if image in self.images:
                 image = self.images[image]
@@ -1490,6 +1490,8 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
             sys.exit() 
         self.update_commands()
         self.images = load_images()
+        nomemes = list(self.images.copy().keys())
+        self.nomemes = filter(lambda x: not("meme") in x, nomemes)
         self.audios = load_audios()
         self.backup_wallpaper_path = join(BURN_DIRECTORY, "wppbkp.png")
         try:
