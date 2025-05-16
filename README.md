@@ -9,7 +9,7 @@ fakeshutdown - Fake system shutdown.
 altf4 - Simulate Alt + F4.
 clear - Removes all cv2 windows, closes webcam and removes temporary files.
 📸 Camera & Screen
-selphie - Take a webcam selfie.
+selfie - Take a webcam selfie.
 screenshot - Capture screen.
 fullclip - Record screen + webcam.
 webcamclip - Record webcam.
@@ -55,6 +55,8 @@ livekeylogger - Sends live updates about what's being typed on the keyboard.
 🦑 Misc
 plankton - Plankton.
 planktonnoaudio - Plankton no audio.
+johnpork - John Pork.
+johnporknoaudio - John Prok no audio.
 gabinetti - Gabinetti nella villa.
 duckyscript - Execute duckyscript string.
 duckyhelp - Show Duckyscript tutorial.
