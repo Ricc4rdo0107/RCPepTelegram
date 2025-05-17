@@ -20,11 +20,12 @@ waitforface - Send a webcam photo when face is detected till timeout.
 breath - Play breathing sound.
 pss - Play "psst" sound.
 microphone - Record mic audio.
-mute - Set computer's volume to 0.
-full - Set computer's volume to 100.
+mutevolume - Set computer's volume to 0.
+fullvolume - Set computer's volume to 100.
 setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
 tralalerotralala - Plays italian brainrot.
+mixermenu - Sends a mixer menu.
 😈 Pranks & Visuals
 jumpscare - Show random jumpscare.
 jumpscarenoaudio - Jumpscare no audio.
