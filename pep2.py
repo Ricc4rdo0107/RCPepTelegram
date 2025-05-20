@@ -241,7 +241,7 @@ def ogg_to_wav(filename: str, rmold: bool=False) -> str:
     return new_filepath
 
 #GETTING TOKEN AND CHAT_ID
-def getCred(filename:str="auth.json") -> tuple[str,int]:
+def getCred(filename:str=resource_path("auth.json")) -> tuple[str,int]:
     with open(filename) as fi:
         var = json.load(fi)
     return var["token"],var["chatid"]
